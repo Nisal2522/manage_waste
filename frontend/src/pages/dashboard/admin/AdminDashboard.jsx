@@ -75,7 +75,7 @@ const AdminDashboard = () => {
       value: '2,847', 
       change: '+12%', 
       changeType: 'increase',
-      color: 'primary.main', 
+      color: '#10b981', 
       icon: <People />,
       trend: [65, 70, 75, 80, 85, 90, 95, 100],
       description: 'Active users this month'
@@ -85,7 +85,7 @@ const AdminDashboard = () => {
       value: '15.2K kg', 
       change: '+8%', 
       changeType: 'increase',
-      color: 'success.main', 
+      color: '#059669', 
       icon: <Recycling />,
       trend: [40, 45, 50, 55, 60, 65, 70, 75],
       description: 'Total waste processed'
@@ -95,7 +95,7 @@ const AdminDashboard = () => {
       value: '24', 
       change: '+2', 
       changeType: 'increase',
-      color: 'info.main', 
+      color: '#3b82f6', 
       icon: <Timeline />,
       trend: [15, 18, 20, 22, 24, 26, 28, 30],
       description: 'Active collection routes'
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
       value: '156', 
       change: '+5%', 
       changeType: 'increase',
-      color: 'warning.main', 
+      color: '#14b8a6', 
       icon: <People />,
       trend: [120, 125, 130, 135, 140, 145, 150, 155],
       description: 'Staff members online'
@@ -168,10 +168,106 @@ const AdminDashboard = () => {
       flexGrow: 1, 
       backgroundColor: '#f8fafc', 
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      backgroundAttachment: 'fixed'
+      background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #d1fae5 100%)',
+      backgroundAttachment: 'fixed',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Enhanced Background Effects */}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: '25%',
+            width: 384,
+            height: 384,
+            borderRadius: '50%',
+            background: 'linear-gradient(45deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))',
+            filter: 'blur(60px)',
+            animation: 'pulse 3s ease-in-out infinite'
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            right: '25%',
+            width: 320,
+            height: 320,
+            borderRadius: '50%',
+            background: 'linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(29, 78, 216, 0.1))',
+            filter: 'blur(60px)',
+            animation: 'pulse 3s ease-in-out infinite 1s'
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: '25%',
+            left: '33%',
+            width: 288,
+            height: 288,
+            borderRadius: '50%',
+            background: 'linear-gradient(45deg, rgba(16, 185, 129, 0.1), rgba(20, 184, 166, 0.1))',
+            filter: 'blur(60px)',
+            animation: 'pulse 3s ease-in-out infinite 2s'
+          }}
+        />
+        
+        {/* Floating Elements */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 80,
+            left: 80,
+            width: 32,
+            height: 32,
+            background: 'linear-gradient(45deg, #10b981, #059669)',
+            borderRadius: 2,
+            transform: 'rotate(45deg)',
+            opacity: 0.2,
+            animation: 'bounce 2s ease-in-out infinite'
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 160,
+            right: 128,
+            width: 24,
+            height: 24,
+            background: 'linear-gradient(45deg, #3b82f6, #1d4ed8)',
+            borderRadius: '50%',
+            opacity: 0.3,
+            animation: 'bounce 2s ease-in-out infinite 0.5s'
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 160,
+            left: 64,
+            width: 40,
+            height: 40,
+            background: 'linear-gradient(45deg, #10b981, #14b8a6)',
+            borderRadius: 2,
+            transform: 'rotate(12deg)',
+            opacity: 0.25,
+            animation: 'bounce 2s ease-in-out infinite 1s'
+          }}
+        />
+      </Box>
+
+      <Container maxWidth="xl" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
         {/* Modern Header */}
         <Fade in timeout={600}>
           <Paper elevation={0} sx={{ 
@@ -186,7 +282,7 @@ const AdminDashboard = () => {
               <Box>
                 <Typography variant="h4" component="h1" sx={{ 
                   fontWeight: 700, 
-                  background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                  background: 'linear-gradient(45deg, #10b981, #059669)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -201,9 +297,14 @@ const AdminDashboard = () => {
               <Stack direction="row" spacing={2}>
                 <Tooltip title="Refresh Data">
                   <IconButton sx={{ 
-                    bgcolor: 'primary.main', 
+                    background: 'linear-gradient(45deg, #10b981, #059669)',
                     color: 'white',
-                    '&:hover': { bgcolor: 'primary.dark' }
+                    '&:hover': { 
+                      background: 'linear-gradient(45deg, #059669, #047857)',
+                      transform: 'translateY(-2px)'
+                    },
+                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)',
+                    transition: 'all 0.3s ease'
                   }}>
                     <Refresh />
                   </IconButton>
@@ -212,10 +313,19 @@ const AdminDashboard = () => {
                   variant="contained" 
                   startIcon={<Add />}
                   sx={{ 
+                    background: 'linear-gradient(45deg, #10b981, #059669)',
+                    color: 'white',
                     borderRadius: 2,
                     textTransform: 'none',
                     px: 3,
-                    py: 1
+                    py: 1,
+                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #059669, #047857)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 12px 30px rgba(16, 185, 129, 0.35)'
+                    },
+                    transition: 'all 0.3s ease'
                   }}
                 >
                   Add User
@@ -227,7 +337,15 @@ const AdminDashboard = () => {
                     borderRadius: 2,
                     textTransform: 'none',
                     px: 3,
-                    py: 1
+                    py: 1,
+                    borderColor: '#10b981',
+                    color: '#10b981',
+                    '&:hover': {
+                      borderColor: '#059669',
+                      backgroundColor: 'rgba(16, 185, 129, 0.04)',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.3s ease'
                   }}
                 >
                   Settings
@@ -343,7 +461,7 @@ const AdminDashboard = () => {
                 <CardHeader
                   title={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Security sx={{ mr: 1, color: 'primary.main' }} />
+                      <Security sx={{ mr: 1, color: '#10b981' }} />
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         System Alerts
                       </Typography>
@@ -409,7 +527,7 @@ const AdminDashboard = () => {
                 <CardHeader
                   title={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Timeline sx={{ mr: 1, color: 'primary.main' }} />
+                      <Timeline sx={{ mr: 1, color: '#10b981' }} />
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         Recent Activities
                       </Typography>
@@ -475,7 +593,7 @@ const AdminDashboard = () => {
             <CardHeader
               title={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <People sx={{ mr: 1, color: 'primary.main' }} />
+                  <People sx={{ mr: 1, color: '#10b981' }} />
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Recent Users
                   </Typography>
@@ -511,7 +629,11 @@ const AdminDashboard = () => {
                     <TableRow key={user.id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                          <Avatar sx={{ 
+                            mr: 2, 
+                            background: 'linear-gradient(45deg, #10b981, #059669)',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                          }}>
                             {user.name.split(' ').map(n => n[0]).join('')}
                           </Avatar>
                           <Box>
@@ -528,7 +650,13 @@ const AdminDashboard = () => {
                         <Chip 
                           label={user.role} 
                           size="small" 
-                          color="primary" 
+                          sx={{
+                            color: '#10b981',
+                            borderColor: '#10b981',
+                            '&:hover': {
+                              backgroundColor: 'rgba(16, 185, 129, 0.04)'
+                            }
+                          }}
                           variant="outlined"
                         />
                       </TableCell>
