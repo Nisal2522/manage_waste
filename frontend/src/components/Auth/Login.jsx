@@ -86,15 +86,14 @@ const Login = () => {
       const response = await loginUser(formData);
       console.log('Login response:', response); // Debug log
       
-      // Check if response has the expected structure
-      const userData = response.data || response;
-      console.log('User data:', userData); // Debug log
+      // Pass the entire response to AuthContext - it will handle the data extraction
+      login(response);
       
-      // Store user role for navigation
-      setUserRole(userData.role);
-      
-      // Update auth context
-      login(userData);
+      // Extract user role for navigation
+      const userData = response.data?.user || response.user || response;
+      const userRole = userData?.role;
+      console.log('User role for navigation:', userRole); // Debug log
+      setUserRole(userRole);
       
       // Set login success flag to trigger navigation in useEffect
       setLoginSuccess(true);

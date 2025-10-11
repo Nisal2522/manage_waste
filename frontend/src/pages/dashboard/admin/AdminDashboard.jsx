@@ -68,6 +68,7 @@ import {
 } from '@mui/icons-material';
 
 const AdminDashboard = () => {
+
   // Mock data - replace with actual API calls
   const stats = [
     { 
@@ -165,7 +166,6 @@ const AdminDashboard = () => {
 
   return (
     <Box sx={{ 
-      flexGrow: 1, 
       backgroundColor: '#f8fafc', 
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #d1fae5 100%)',
@@ -267,33 +267,33 @@ const AdminDashboard = () => {
         />
       </Box>
 
-      <Container maxWidth="xl" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
-        {/* Modern Header */}
-        <Fade in timeout={600}>
-          <Paper elevation={0} sx={{ 
-            p: 3, 
-            mb: 4, 
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: 3,
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Typography variant="h4" component="h1" sx={{ 
-                  fontWeight: 700, 
-                  background: 'linear-gradient(45deg, #10b981, #059669)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  mb: 1
-                }}>
-                  Admin Dashboard
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Welcome back! Here's what's happening with your waste management system.
-                </Typography>
-              </Box>
+        <Container maxWidth="xl" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
+          {/* Modern Header */}
+          <Fade in timeout={600}>
+            <Paper elevation={0} sx={{ 
+              p: 3, 
+              mb: 4, 
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: 3,
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h4" component="h1" sx={{ 
+                    fontWeight: 700, 
+                    background: 'linear-gradient(45deg, #10b981, #059669)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    mb: 1
+                  }}>
+                    Welcome Back!
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Here's what's happening with your waste management system.
+                  </Typography>
+                </Box>
               <Stack direction="row" spacing={2}>
                 <Tooltip title="Refresh Data">
                   <IconButton sx={{ 
@@ -698,7 +698,7 @@ const AdminDashboard = () => {
             </TableContainer>
           </Card>
         </Fade>
-      </Container>
+        </Container>
     </Box>
   );
 };
