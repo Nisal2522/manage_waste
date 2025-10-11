@@ -18,10 +18,42 @@ import About from './pages/Landing/About.jsx';
 import Services from './pages/Landing/Services.jsx';
 import Contact from './pages/Landing/Contact.jsx';
 
-// Dashboard Pages (Placeholder components)
-const AdminDashboard = () => <div>Admin Dashboard - Coming Soon</div>;
-const StaffDashboard = () => <div>Staff Dashboard - Coming Soon</div>;
-const ResidentDashboard = () => <div>Resident Dashboard - Coming Soon</div>;
+// Dashboard Pages
+import AdminDashboard from './pages/dashboard/admin/AdminDashboard.jsx';
+import StaffDashboard from './pages/dashboard/staff/StaffDashboard.jsx';
+import ResidentDashboard from './pages/dashboard/resident/ResidentDashboard.jsx';
+
+// Role-based redirect component
+const RoleBasedRedirect = () => {
+  const { user, isAuthenticated } = useAuth();
+  
+  console.log('RoleBasedRedirect - user:', user); // Debug log
+  console.log('RoleBasedRedirect - isAuthenticated:', isAuthenticated); // Debug log
+  
+  if (!isAuthenticated) {
+    console.log('Not authenticated, redirecting to login'); // Debug log
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Handle nested user structure
+  const userRole = user?.user?.role || user?.role;
+  console.log('User role extracted:', userRole); // Debug log
+  
+  switch (userRole) {
+    case 'admin':
+      console.log('Redirecting to admin dashboard'); // Debug log
+      return <Navigate to="/dashboard/admin" replace />;
+    case 'staff':
+      console.log('Redirecting to staff dashboard'); // Debug log
+      return <Navigate to="/dashboard/staff" replace />;
+    case 'resident':
+      console.log('Redirecting to resident dashboard'); // Debug log
+      return <Navigate to="/dashboard/resident" replace />;
+    default:
+      console.log('Unknown role, redirecting to login'); // Debug log
+      return <Navigate to="/login" replace />;
+  }
+};
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -31,7 +63,10 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login" />;
   }
   
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+  // Handle nested user structure
+  const userRole = user?.user?.role || user?.role;
+  
+  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
     return <Navigate to="/unauthorized" />;
   }
   
@@ -76,7 +111,7 @@ function App() {
                   path="/dashboard" 
                   element={
                     <ProtectedRoute>
-                      <div>Dashboard - Role-based routing coming soon</div>
+                      <RoleBasedRedirect />
                     </ProtectedRoute>
                   } 
                 />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -41,9 +41,33 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   
-  const { login } = useAuth();
+  const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Handle navigation after successful login
+  useEffect(() => {
+    if (loginSuccess && user && isAuthenticated) {
+      // Handle nested user structure
+      const userRole = user?.user?.role || user?.role;
+      console.log('Login successful, navigating based on role:', userRole);
+      switch (userRole) {
+        case 'admin':
+          navigate('/dashboard/admin');
+          break;
+        case 'staff':
+          navigate('/dashboard/staff');
+          break;
+        case 'resident':
+          navigate('/dashboard/resident');
+          break;
+        default:
+          navigate('/dashboard');
+      }
+    }
+  }, [loginSuccess, user, isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -56,13 +80,29 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setLoginSuccess(false);
 
     try {
       const response = await loginUser(formData);
-      login(response.data);
-      navigate('/dashboard');
+      console.log('Login response:', response); // Debug log
+      
+      // Check if response has the expected structure
+      const userData = response.data || response;
+      console.log('User data:', userData); // Debug log
+      
+      // Store user role for navigation
+      setUserRole(userData.role);
+      
+      // Update auth context
+      login(userData);
+      
+      // Set login success flag to trigger navigation in useEffect
+      setLoginSuccess(true);
+      
     } catch (err) {
+      console.error('Login error:', err); // Debug log
       setError(err.response?.data?.message || 'Login failed');
+      setLoginSuccess(false);
     } finally {
       setLoading(false);
     }

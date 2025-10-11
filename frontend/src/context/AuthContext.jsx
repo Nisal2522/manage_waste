@@ -35,9 +35,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
+    console.log('AuthContext login called with:', userData); // Debug log
     setUser(userData);
     if (userData.token) {
       localStorage.setItem('token', userData.token);
+      console.log('Token saved to localStorage'); // Debug log
     }
   };
 

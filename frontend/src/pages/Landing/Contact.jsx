@@ -164,30 +164,6 @@ const Contact = () => {
           }}
         >
           <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
-            {/* Chip with Icon */}
-            <Chip
-              icon={<Business />}
-              label="Get In Touch"
-              sx={{
-                backgroundColor: '#047857',
-                color: 'white',
-                mb: 4,
-                fontWeight: 'bold',
-                fontSize: '0.875rem',
-                px: 3,
-                py: 1.5,
-                height: 'auto',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                '&:hover': {
-                  backgroundColor: '#065f46',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 8px 25px rgba(4, 120, 87, 0.3)'
-                },
-                transition: 'all 0.3s ease'
-              }}
-            />
-            
             {/* Main Heading */}
             <Typography 
               variant="h1" 
