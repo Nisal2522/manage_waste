@@ -222,4 +222,45 @@ export const validateQRCode = async (qrData) => {
   return response.data;
 };
 
+// Bin Request API
+export const getBinRequests = async (params = {}) => {
+  const response = await api.get('/bin-requests', { params });
+  return response.data;
+};
+
+export const getBinRequestById = async (id) => {
+  const response = await api.get(`/bin-requests/${id}`);
+  return response.data;
+};
+
+export const createBinRequest = async (requestData) => {
+  const response = await api.post('/bin-requests', requestData);
+  return response.data;
+};
+
+export const updateBinRequest = async (id, requestData) => {
+  const response = await api.put(`/bin-requests/${id}`, requestData);
+  return response.data;
+};
+
+export const deleteBinRequest = async (id) => {
+  const response = await api.delete(`/bin-requests/${id}`);
+  return response.data;
+};
+
+export const updateBinRequestStatus = async (id, status, adminNotes = '') => {
+  const response = await api.patch(`/bin-requests/${id}/status`, { status, adminNotes });
+  return response.data;
+};
+
+export const getBinRequestsByUser = async (userId) => {
+  const response = await api.get(`/bin-requests/user/${userId}`);
+  return response.data;
+};
+
+export const getBinRequestsByStatus = async (status) => {
+  const response = await api.get(`/bin-requests/status/${status}`);
+  return response.data;
+};
+
 export default api;

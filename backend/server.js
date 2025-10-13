@@ -6,11 +6,12 @@ import dotenv from 'dotenv';
 
 // Import routes
 import authRoutes from './routes/auth.js';
+import binRequestRoutes from './routes/binRequests.js';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 
 
 // Middleware
@@ -38,6 +39,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/waste_man
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/bin-requests', binRequestRoutes);
 
 // Notifications endpoint (accessible by all authenticated users)
 app.get('/api/notifications', (req, res) => {

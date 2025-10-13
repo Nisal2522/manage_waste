@@ -455,6 +455,7 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               required
+              autoComplete="email"
                       sx={{ mb: 3 }}
               InputProps={{
                 startAdornment: (
@@ -473,6 +474,7 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               required
+              autoComplete="current-password"
                       sx={{ mb: 3 }}
               InputProps={{
                 startAdornment: (

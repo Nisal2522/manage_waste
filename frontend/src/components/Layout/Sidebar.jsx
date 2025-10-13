@@ -222,7 +222,7 @@ const Sidebar = ({ open, onClose, isCollapsed, onToggleCollapse }) => {
             disableHoverListener={!isCollapsed}
           >
             <ListItem
-              button
+              component="button"
               onClick={() => handleItemClick(item.path)}
               selected={location.pathname === item.path}
               sx={{

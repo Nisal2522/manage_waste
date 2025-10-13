@@ -37,10 +37,27 @@ import LayoutWrapper from './components/Layout/LayoutWrapper.jsx';
 
 // Role-based redirect component
 const RoleBasedRedirect = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   
   console.log('RoleBasedRedirect - user:', user); // Debug log
   console.log('RoleBasedRedirect - isAuthenticated:', isAuthenticated); // Debug log
+  console.log('RoleBasedRedirect - loading:', loading); // Debug log
+  
+  // Show loading while authentication is being checked
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <div>Loading...</div>
+      </Box>
+    );
+  }
   
   if (!isAuthenticated) {
     console.log('Not authenticated, redirecting to login'); // Debug log
@@ -69,7 +86,23 @@ const RoleBasedRedirect = () => {
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  
+  // Show loading while authentication is being checked
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <div>Loading...</div>
+      </Box>
+    );
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" />;

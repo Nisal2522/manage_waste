@@ -30,20 +30,56 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             console.log('Token expired, user logged out');
           } else {
-            // Token is valid, get user data
-            const response = await getCurrentUser();
-            console.log('getCurrentUser response:', response); // Debug log
-            
-            // Handle API response structure: { success: true, data: { user: {...} } }
-            const userData = response.data?.user || response.user || response;
-            console.log('Extracted user from getCurrentUser:', userData); // Debug log
-            setUser(userData);
+            // Try to get user from localStorage first (fallback)
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+              try {
+                const parsedUser = JSON.parse(storedUser);
+                console.log('Using stored user data:', parsedUser);
+                setUser(parsedUser);
+                return; // Skip API call if we have stored user data
+              } catch (e) {
+                console.log('Failed to parse stored user data');
+              }
+            }
+            // Token is valid, get user data with timeout
+            try {
+              console.log('Attempting to get current user with token...');
+              const response = await Promise.race([
+                getCurrentUser(),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Request timeout')), 10000)
+                )
+              ]);
+              console.log('getCurrentUser response:', response); // Debug log
+              
+              // Handle API response structure: { success: true, data: { user: {...} } }
+              const userData = response.data?.user || response.user || response;
+              console.log('Extracted user from getCurrentUser:', userData); // Debug log
+              setUser(userData);
+            } catch (timeoutError) {
+              console.log('Auth request timeout or error:', timeoutError.message);
+              // Don't clear token immediately, just set user to null temporarily
+              setUser(null);
+            }
           }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        localStorage.removeItem('token');
-        setUser(null);
+        
+        // Only clear token if it's an authentication error, not a network error
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token');
+          setUser(null);
+        } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+          // Network error - keep token but set user to null temporarily
+          console.log('Network error - backend server may not be running');
+          setUser(null);
+        } else {
+          // Other errors - clear token
+          localStorage.removeItem('token');
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -80,14 +116,19 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       console.log('Token saved to localStorage'); // Debug log
     }
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+      console.log('User data saved to localStorage'); // Debug log
+    }
   };
 
   const logout = () => {
     // Clear user state
     setUser(null);
     
-    // Remove token from localStorage
+    // Remove token and user data from localStorage
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     
     // Optional: Call logout endpoint to invalidate token on server
     // This ensures the JWT is properly expired on the backend

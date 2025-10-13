@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -36,32 +36,70 @@ import {
   RequestPage
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext.jsx';
+import { useAuth } from '../../../context/AuthContext';
+import { getBinRequestsByUser } from '../../../utils/api';
 
 const ResidentDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [binRequests, setBinRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user's bin requests
+  useEffect(() => {
+    const fetchBinRequests = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoading(true);
+        const response = await getBinRequestsByUser(user.id);
+        setBinRequests(response.data || []);
+        console.log('Fetched bin requests:', response.data);
+      } catch (error) {
+        console.error('Error fetching bin requests:', error);
+        setBinRequests([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBinRequests();
+  }, [user?.id]);
   
-  // Mock data - replace with actual API calls
+  // Calculate stats from real bin requests data
+  const totalRequests = binRequests.length;
+  const pendingRequests = binRequests.filter(req => req.status === 'pending').length;
+  const approvedRequests = binRequests.filter(req => req.status === 'approved').length;
+  const completedRequests = binRequests.filter(req => req.status === 'completed').length;
+
   const stats = [
-    { title: 'Waste Collected', value: '45.2 kg', change: '+8%', color: 'success.main', icon: <Recycling /> },
-    { title: 'Next Collection', value: 'Tomorrow', change: '9:00 AM', color: 'info.main', icon: <Schedule /> },
-    { title: 'Points Earned', value: '1,250', change: '+50', color: 'warning.main', icon: <TrendingUp /> },
-    { title: 'Recycling Rate', value: '85%', change: '+5%', color: 'primary.main', icon: <Recycling /> }
+    { title: 'Total Requests', value: totalRequests.toString(), change: '', color: 'primary.main', icon: <RequestPage /> },
+    { title: 'Pending', value: pendingRequests.toString(), change: '', color: 'warning.main', icon: <Schedule /> },
+    { title: 'Approved', value: approvedRequests.toString(), change: '', color: 'success.main', icon: <CheckCircle /> },
+    { title: 'Completed', value: completedRequests.toString(), change: '', color: 'info.main', icon: <Recycling /> }
   ];
 
-  const upcomingCollections = [
-    { id: 1, type: 'Organic', date: 'Tomorrow', time: '9:00 AM', status: 'scheduled' },
-    { id: 2, type: 'Recyclables', date: 'Friday', time: '2:00 PM', status: 'scheduled' },
-    { id: 3, type: 'General', date: 'Next Monday', time: '10:00 AM', status: 'scheduled' }
-  ];
+  // Show recent bin requests as upcoming collections
+  const upcomingCollections = binRequests
+    .filter(req => req.status === 'pending' || req.status === 'approved')
+    .slice(0, 3)
+    .map((req, index) => ({
+      id: req._id || req.id || index,
+      type: req.selectedBins ? req.selectedBins.map(bin => bin.binType).join(', ') : 'General',
+      date: req.requestDate ? new Date(req.requestDate).toLocaleDateString() : 'Today',
+      time: req.requestDate ? new Date(req.requestDate).toLocaleTimeString() : 'N/A',
+      status: req.status
+    }));
 
-  const recentActivities = [
-    { id: 1, type: 'success', message: 'Waste collection completed', time: '2 days ago' },
-    { id: 2, type: 'info', message: 'New collection scheduled', time: '1 week ago' },
-    { id: 3, type: 'warning', message: 'Reminder: Separate your waste', time: '2 weeks ago' },
-    { id: 4, type: 'success', message: 'Points earned for recycling', time: '3 weeks ago' }
-  ];
+  // Show recent bin request activities
+  const recentActivities = binRequests
+    .slice(0, 4)
+    .map((req, index) => ({
+      id: req._id || req.id || index,
+      type: req.status === 'completed' ? 'success' : req.status === 'approved' ? 'info' : 'warning',
+      message: `Bin request ${req.status} - ${req.selectedBins ? req.selectedBins.map(bin => bin.binType).join(', ') : 'General'} bins`,
+      time: req.requestDate ? new Date(req.requestDate).toLocaleDateString() : 'Recently'
+    }));
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -276,25 +314,23 @@ const ResidentDashboard = () => {
                         </ListItemAvatar>
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                {collection.type} Waste
-                              </Typography>
-                              <Chip 
-                                label={collection.status} 
-                                color={getStatusColor(collection.status)}
-                                size="small"
-                              />
-                            </Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', component: 'div' }}>
+                              {collection.type} Waste
+                            </Typography>
                           }
                           secondary={
-                            <Box>
-                              <Typography variant="body2" color="text.secondary">
-                                {collection.date} at {collection.time}
-                              </Typography>
-                            </Box>
+                            <Typography variant="body2" color="text.secondary" component="div">
+                              {collection.date} at {collection.time}
+                            </Typography>
                           }
                         />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                          <Chip 
+                            label={collection.status} 
+                            color={getStatusColor(collection.status)}
+                            size="small"
+                          />
+                        </Box>
                       </ListItem>
                       {index < upcomingCollections.length - 1 && <Divider />}
                     </React.Fragment>
