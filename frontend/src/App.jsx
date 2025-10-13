@@ -6,7 +6,6 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 
 // Layout Components
 import Navbar from './components/Layout/Navbar.jsx';
-import Footer from './components/Layout/Footer.jsx';
 
 // Auth Components
 import Login from './components/Auth/Login.jsx';
@@ -20,8 +19,21 @@ import Contact from './pages/Landing/Contact.jsx';
 
 // Dashboard Pages
 import AdminDashboard from './pages/dashboard/admin/AdminDashboard.jsx';
+import AdminBins from './pages/dashboard/admin/AdminBins.jsx';
+import AdminCollections from './pages/dashboard/admin/AdminCollections.jsx';
+import AdminPayments from './pages/dashboard/admin/AdminPayments.jsx';
+import AdminAnalytics from './pages/dashboard/admin/AdminAnalytics.jsx';
+import AdminUsers from './pages/dashboard/admin/AdminUsers.jsx';
+import AdminBinRequests from './pages/dashboard/admin/AdminBinRequests.jsx';
 import StaffDashboard from './pages/dashboard/staff/StaffDashboard.jsx';
 import ResidentDashboard from './pages/dashboard/resident/ResidentDashboard.jsx';
+import ResidentBinRequests from './pages/dashboard/resident/ResidentBinRequests.jsx';
+
+// Profile Page
+import Profile from './pages/Profile.jsx';
+
+// Layout Components
+import LayoutWrapper from './components/Layout/LayoutWrapper.jsx';
 
 // Role-based redirect component
 const RoleBasedRedirect = () => {
@@ -119,7 +131,91 @@ function App() {
                   path="/dashboard/admin" 
                   element={
                     <ProtectedRoute allowedRoles={['admin']}>
-                      <AdminDashboard />
+                      <LayoutWrapper>
+                        <AdminDashboard />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/dashboard" 
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <LayoutWrapper>
+                        <AdminDashboard />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/bins" 
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <LayoutWrapper>
+                        <AdminBins />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/collections" 
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <LayoutWrapper>
+                        <AdminCollections />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/payments" 
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <LayoutWrapper>
+                        <AdminPayments />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/analytics" 
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <LayoutWrapper>
+                        <AdminAnalytics />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/users" 
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <LayoutWrapper>
+                        <AdminUsers />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/bin-requests" 
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <LayoutWrapper>
+                        <AdminBinRequests />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Profile Route */}
+                <Route 
+                  path="/profile" 
+                  element={
+                    <ProtectedRoute>
+                      <LayoutWrapper>
+                        <Profile />
+                      </LayoutWrapper>
                     </ProtectedRoute>
                   } 
                 />
@@ -127,7 +223,9 @@ function App() {
                   path="/dashboard/staff" 
                   element={
                     <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                      <StaffDashboard />
+                      <LayoutWrapper>
+                        <StaffDashboard />
+                      </LayoutWrapper>
                     </ProtectedRoute>
                   } 
                 />
@@ -135,7 +233,19 @@ function App() {
                   path="/dashboard/resident" 
                   element={
                     <ProtectedRoute allowedRoles={['resident', 'admin']}>
-                      <ResidentDashboard />
+                      <LayoutWrapper>
+                        <ResidentDashboard />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/resident/requests" 
+                  element={
+                    <ProtectedRoute allowedRoles={['resident', 'admin']}>
+                      <LayoutWrapper>
+                        <ResidentBinRequests />
+                      </LayoutWrapper>
                     </ProtectedRoute>
                   } 
                 />
@@ -144,7 +254,6 @@ function App() {
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </Box>
-            <Footer />
           </Box>
         </Router>
       </AuthProvider>

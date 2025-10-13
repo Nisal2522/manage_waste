@@ -1040,6 +1040,33 @@ const Register = () => {
               width: '100%',
               px: { xs: 1, sm: 0 }
             }}>
+              {/* Register Card */}
+              <Fade in timeout={800}>
+                <Card
+                  sx={{
+                    boxShadow: { xs: '0 10px 25px rgba(0, 0, 0, 0.1)', sm: '0 20px 40px rgba(0, 0, 0, 0.12)' },
+                    border: 'none',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: { xs: 4, sm: 5, lg: 6 },
+                    mb: 3,
+                    p: 2
+                  }}
+                >
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: 'success.main',
+                      textAlign: 'center'
+                    }}
+                  >
+                    Register
+                  </Typography>
+                </Card>
+              </Fade>
+              
+              {/* Main Form Card */}
               <Fade in timeout={800}>
                 <Card
                   sx={{
@@ -1062,6 +1089,26 @@ const Register = () => {
                     pt: { xs: 6, lg: 8 },
                     background: 'linear-gradient(45deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02))'
                   }}>
+                    {/* Register Header */}
+                    <Typography 
+                      variant="h3" 
+                      component="h1" 
+                      sx={{ 
+                        color: 'success.main',
+                        fontSize: { xs: '2rem', sm: '2.5rem', lg: '3rem' },
+                        fontWeight: 'bold',
+                        mb: { xs: 2, lg: 3 },
+                        textAlign: 'center',
+                        background: 'linear-gradient(45deg, #10b981, #059669)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textShadow: '0 2px 4px rgba(16, 185, 129, 0.1)'
+                      }}
+                    >
+                      Register
+                    </Typography>
+                    
                     <Box
                       sx={{
                         width: { xs: 48, sm: 56, lg: 64 },
@@ -1103,18 +1150,18 @@ const Register = () => {
                         <Alert 
                           severity="error" 
                           sx={{ 
-                            mb: 4, 
-                            borderRadius: 3,
-                            border: '1px solid',
-                            borderColor: 'error.light',
+                          mb: 4, 
+                          borderRadius: 3,
+                          border: '1px solid',
+                          borderColor: 'error.light',
                             backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                            color: 'error.dark',
+                          color: 'error.dark',
                             fontSize: '0.95rem',
                             fontWeight: 500,
-                            '& .MuiAlert-icon': {
+                          '& .MuiAlert-icon': {
                               color: 'error.main',
                               fontSize: '1.25rem'
-                            }
+                          }
                           }}
                         >
                           {error}
@@ -1128,7 +1175,7 @@ const Register = () => {
                             <Step key={step.label}>
                               <StepLabel
                                 onClick={() => handleStepClick(index)}
-                                sx={{
+                              sx={{
                                   cursor: index <= activeStep ? 'pointer' : 'default',
                                   '& .MuiStepLabel-label': {
                                     fontSize: '0.9rem',
@@ -1143,7 +1190,7 @@ const Register = () => {
                                   }
                                 }}
                               >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   {step.icon}
                                   <Typography variant="body2" sx={{ 
                                     fontWeight: 600,
@@ -1151,18 +1198,18 @@ const Register = () => {
                                   }}>
                                     {step.label}
                                   </Typography>
-                                </Box>
+                                  </Box>
                               </StepLabel>
                             </Step>
                           ))}
                         </Stepper>
-                      </Box>
+                                  </Box>
 
                       {/* Step Content */}
                       <Fade in timeout={300}>
                         <Box>
                           {renderStepContent(activeStep)}
-                        </Box>
+                      </Box>
                       </Fade>
                     </CardContent>
 
@@ -1177,12 +1224,12 @@ const Register = () => {
                         onClick={handleBack}
                         disabled={activeStep === 0}
                         startIcon={<KeyboardArrowLeft />}
-                        sx={{
+                              sx={{
                           color: 'text.secondary',
                           fontWeight: 600,
                           textTransform: 'none',
                           fontSize: '1rem',
-                          '&:hover': {
+                                  '&:hover': {
                             backgroundColor: 'rgba(16, 185, 129, 0.1)',
                             color: 'success.main'
                           },
@@ -1196,14 +1243,14 @@ const Register = () => {
 
                       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                         {activeStep === steps.length - 1 ? (
-                          <Button
-                            type="submit"
-                            variant="contained"
-                            size="large"
-                            disabled={loading}
-                            sx={{
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        size="large"
+                        disabled={loading}
+                        sx={{
                               background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-                              color: 'white',
+                          color: 'white',
                               py: 2,
                               px: 4,
                               fontSize: '1.1rem',
@@ -1212,9 +1259,9 @@ const Register = () => {
                               boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3), 0 4px 10px rgba(16, 185, 129, 0.2)',
                               textTransform: 'none',
                               letterSpacing: '0.02em',
-                              '&:hover': {
+                          '&:hover': {
                                 background: 'linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%)',
-                                transform: 'translateY(-2px)',
+                            transform: 'translateY(-2px)',
                                 boxShadow: '0 15px 35px rgba(16, 185, 129, 0.4), 0 8px 15px rgba(16, 185, 129, 0.3)'
                               },
                               '&:active': {
@@ -1228,35 +1275,35 @@ const Register = () => {
                                 boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)'
                               },
                               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              position: 'relative',
-                              overflow: 'hidden',
-                              '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: '-100%',
-                                width: '100%',
-                                height: '100%',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: '-100%',
+                            width: '100%',
+                            height: '100%',
                                 background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
                                 transition: 'left 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-                              },
-                              '&:hover::before': {
-                                left: '100%'
-                              }
-                            }}
-                          >
-                            {loading ? (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <CircularProgress size={20} sx={{ color: 'white' }} />
-                                <span>Creating Account...</span>
-                              </Box>
-                            ) : (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <CheckCircle sx={{ fontSize: 20 }} />
-                                <span>Create Account</span>
-                              </Box>
-                            )}
-                          </Button>
+                          },
+                          '&:hover::before': {
+                            left: '100%'
+                          }
+                        }}
+                      >
+                        {loading ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <CircularProgress size={20} sx={{ color: 'white' }} />
+                            <span>Creating Account...</span>
+                          </Box>
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <CheckCircle sx={{ fontSize: 20 }} />
+                            <span>Create Account</span>
+                          </Box>
+                        )}
+                      </Button>
                         ) : (
                           <Button
                             onClick={handleNext}
@@ -1305,17 +1352,17 @@ const Register = () => {
                         fontSize: '1rem',
                         fontWeight: 500
                       }}>
-                        Already have an account?{' '}
-                        <Link 
-                          component={RouterLink} 
-                          to="/login"
-                          sx={{ 
-                            color: 'success.main',
+                          Already have an account?{' '}
+                          <Link 
+                            component={RouterLink} 
+                            to="/login"
+                            sx={{ 
+                              color: 'success.main',
                             fontWeight: 600,
-                            textDecoration: 'none',
+                              textDecoration: 'none',
                             fontSize: '1.05rem',
                             position: 'relative',
-                            '&:hover': { 
+                              '&:hover': { 
                               color: 'success.dark',
                               '&::after': {
                                 width: '100%'
@@ -1332,12 +1379,12 @@ const Register = () => {
                               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                             },
                             transition: 'color 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                          }}
-                        >
-                          Sign in
-                        </Link>
-                      </Typography>
-                    </Box>
+                            }}
+                          >
+                            Sign in
+                          </Link>
+                        </Typography>
+                      </Box>
                   </Box>
                 </Card>
               </Fade>
