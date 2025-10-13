@@ -209,7 +209,7 @@ const UniversalSidebar = ({ open, onClose }) => {
 
   const handleItemClick = (path) => {
     navigate(path);
-    if (onClose) onClose();
+    // Removed onClose call to prevent sidebar from closing when menu items are clicked
   };
 
   const handleLogout = () => {
@@ -219,12 +219,12 @@ const UniversalSidebar = ({ open, onClose }) => {
 
   const handleProfileClick = () => {
     navigate('/profile');
-    if (onClose) onClose();
+    // Removed onClose call to prevent sidebar from closing
   };
 
   const handleSettingsClick = () => {
     navigate('/settings');
-    if (onClose) onClose();
+    // Removed onClose call to prevent sidebar from closing
   };
 
   return (

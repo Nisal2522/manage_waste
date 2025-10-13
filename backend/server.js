@@ -18,6 +18,15 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Increase payload size limit
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // For form data
 
+// Add cache prevention headers for all responses
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/waste_manage')
 .then(() => {

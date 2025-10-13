@@ -6,7 +6,6 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 
 // Layout Components
 import Navbar from './components/Layout/Navbar.jsx';
-import Footer from './components/Layout/Footer.jsx';
 
 // Auth Components
 import Login from './components/Auth/Login.jsx';
@@ -28,6 +27,7 @@ import AdminUsers from './pages/dashboard/admin/AdminUsers.jsx';
 import AdminBinRequests from './pages/dashboard/admin/AdminBinRequests.jsx';
 import StaffDashboard from './pages/dashboard/staff/StaffDashboard.jsx';
 import ResidentDashboard from './pages/dashboard/resident/ResidentDashboard.jsx';
+import ResidentBinRequests from './pages/dashboard/resident/ResidentBinRequests.jsx';
 
 // Profile Page
 import Profile from './pages/Profile.jsx';
@@ -239,12 +239,21 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
+                <Route 
+                  path="/resident/requests" 
+                  element={
+                    <ProtectedRoute allowedRoles={['resident', 'admin']}>
+                      <LayoutWrapper>
+                        <ResidentBinRequests />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  } 
+                />
                 
                 {/* Catch all route */}
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </Box>
-            <Footer />
           </Box>
         </Router>
       </AuthProvider>

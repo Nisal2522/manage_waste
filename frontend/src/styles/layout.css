@@ -1,0 +1,255 @@
+/* Layout Styles for Fixed Sidebar + Main Content */
+
+/* Dashboard Container - Flex Layout */
+.dashboard-container {
+  display: flex;
+  flex-direction: row;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Main Content - Flex Item */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  min-height: 100vh;
+  position: relative;
+  margin-left: 0 !important;  /* No left margin */
+  width: 100% !important;    /* Full width */
+  z-index: 1;                /* Above sidebar */
+}
+
+/* Desktop - All sidebar states use same positioning */
+.main-content.sidebar-expanded,
+.main-content.sidebar-collapsed,
+.main-content.sidebar-hidden {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* Mobile - Always full width */
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* Tablet - Responsive behavior */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .main-content.sidebar-expanded {
+    margin-left: 250px;
+  }
+  
+  .main-content.sidebar-collapsed {
+    margin-left: 60px;
+  }
+}
+
+/* Dashboard Content - Flex Item */
+.dashboard-content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f8fafc;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  position: relative;
+  left: 0;
+  top: 0;
+  margin-left: 0 !important;  /* No left margin */
+  margin-right: 0 !important; /* No right margin */
+  z-index: 2;                /* Above sidebar */
+}
+
+/* Force left alignment for all content */
+.dashboard-content * {
+  text-align: left !important;
+}
+
+.dashboard-content .MuiContainer-root {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+.dashboard-content .MuiGrid-container {
+  justify-content: flex-start !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Stats Grid Layout */
+.stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 20px;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 250px;
+  max-width: 300px;
+  height: 120px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Stats Grid Layout */
+.stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 20px;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 250px;
+  max-width: 300px;
+  height: 120px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Card spacing improvements */
+.dashboard-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Prevent content shifting when sidebar toggles */
+.content-stable {
+  position: relative;
+  left: 0;
+  top: 0;
+  transition: none;
+}
+
+/* Ensure content stays in place */
+.dashboard-content-stable {
+  position: relative;
+  left: 0;
+  top: 0;
+  transform: none;
+}
+
+/* Force left alignment for dashboard content */
+.dashboard-content-stable {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+
+.dashboard-content-stable .MuiContainer-root {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  max-width: none !important;
+  width: 100% !important;
+}
+
+.dashboard-content-stable .MuiGrid-container {
+  justify-content: flex-start !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+
+/* Header text styling - larger and bold */
+.MuiAppBar-root .MuiTypography-h4 {
+  font-size: 2rem !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+/* Floating animation for background effects */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+}
+
+/* Uniform card styling for consistent layout */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Uniform card dimensions */
+.uniform-card {
+  height: 180px !important;
+  min-width: 200px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.uniform-card-large {
+  height: 400px !important;
+  min-width: 200px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}

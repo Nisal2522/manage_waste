@@ -1040,6 +1040,33 @@ const Register = () => {
               width: '100%',
               px: { xs: 1, sm: 0 }
             }}>
+              {/* Register Card */}
+              <Fade in timeout={800}>
+                <Card
+                  sx={{
+                    boxShadow: { xs: '0 10px 25px rgba(0, 0, 0, 0.1)', sm: '0 20px 40px rgba(0, 0, 0, 0.12)' },
+                    border: 'none',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: { xs: 4, sm: 5, lg: 6 },
+                    mb: 3,
+                    p: 2
+                  }}
+                >
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: 'success.main',
+                      textAlign: 'center'
+                    }}
+                  >
+                    Register
+                  </Typography>
+                </Card>
+              </Fade>
+              
+              {/* Main Form Card */}
               <Fade in timeout={800}>
                 <Card
                   sx={{
@@ -1062,6 +1089,26 @@ const Register = () => {
                     pt: { xs: 6, lg: 8 },
                     background: 'linear-gradient(45deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.02))'
                   }}>
+                    {/* Register Header */}
+                    <Typography 
+                      variant="h3" 
+                      component="h1" 
+                      sx={{ 
+                        color: 'success.main',
+                        fontSize: { xs: '2rem', sm: '2.5rem', lg: '3rem' },
+                        fontWeight: 'bold',
+                        mb: { xs: 2, lg: 3 },
+                        textAlign: 'center',
+                        background: 'linear-gradient(45deg, #10b981, #059669)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textShadow: '0 2px 4px rgba(16, 185, 129, 0.1)'
+                      }}
+                    >
+                      Register
+                    </Typography>
+                    
                     <Box
                       sx={{
                         width: { xs: 48, sm: 56, lg: 64 },

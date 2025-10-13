@@ -4,6 +4,14 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Add cache-busting query parameter to prevent Edge browser caching
+if (window.navigator.userAgent.includes('Edg')) {
+  // Force reload on Edge browser
+  if (!window.location.search.includes('nocache')) {
+    window.location.search = 'nocache=' + Date.now();
+  }
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
