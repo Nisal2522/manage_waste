@@ -7,10 +7,6 @@ import {
   Button,
   TextField,
   Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Chip,
   Alert,
   Snackbar,
@@ -27,13 +23,7 @@ import {
   Paper,
   IconButton,
   Tooltip,
-  Fab,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction
+  CircularProgress
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -42,14 +32,7 @@ import {
   Visibility as ViewIcon,
   CheckCircle as CheckCircleIcon,
   Pending as PendingIcon,
-  Cancel as CancelIcon,
-  LocationOn as LocationIcon,
-  Schedule as ScheduleIcon,
-  Description as DescriptionIcon,
-  Phone as PhoneIcon,
-  Email as EmailIcon,
-  Info as InfoIcon,
-  Warning as WarningIcon
+  Cancel as CancelIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { 
@@ -66,10 +49,11 @@ const ResidentBinRequests = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
-    selectedBins: [], // Array of {binType, quantity, capacity} objects
+    selectedBins: [],
     specialInstructions: '',
     contactPhone: '',
     contactEmail: '',
@@ -128,19 +112,35 @@ const ResidentBinRequests = () => {
     completed: { label: 'Completed', color: 'info', icon: <CheckCircleIcon /> }
   };
 
-  // Load requests on component mount
+  // Get user ID - handle both id and _id
+  const getUserId = () => {
+    return user?.id || user?._id;
+  };
+
+  // Debug user object
+  // useEffect(() => {
+  //   console.log('👤 User object from AuthContext:', user);
+  //   console.log('🆔 User ID:', getUserId());
+  //   console.log('🔑 Token from localStorage:', localStorage.getItem('token'));
+  // }, [user]);
+
+  // Load requests on component mount and when user changes
   useEffect(() => {
-    loadRequests();
-  }, []);
+    const userId = getUserId();
+    if (userId) {
+      loadRequests();
+    }
+  }, [user]);
 
   // Auto-populate form with user data when user is available
   useEffect(() => {
+    const userId = getUserId();
     if (user && !openDialog) {
       setFormData(prevFormData => ({
         ...prevFormData,
         contactPhone: user?.phone || user?.contactPhone || prevFormData.contactPhone,
         contactEmail: user?.email || user?.contactEmail || prevFormData.contactEmail,
-        address: user?.address?.full || user?.address?.street || user?.address || prevFormData.address
+        address: user?.address?.street ? `${user.address.street}, ${user.address.city}, ${user.address.district}` : prevFormData.address
       }));
     }
   }, [user, openDialog]);
@@ -148,33 +148,43 @@ const ResidentBinRequests = () => {
   const loadRequests = async () => {
     setLoading(true);
     try {
-      if (!user?.id) {
-        showSnackbar('User not found', 'error');
+      const userId = getUserId();
+      if (!userId) {
+        showSnackbar('User not found. Please log in again.', 'error');
         return;
       }
       
-      const response = await getBinRequestsByUser(user.id);
-      setRequests(response.data || []);
+      console.log('🔍 Loading requests for user ID:', userId);
+      const response = await getBinRequestsByUser(userId);
+      console.log('📦 API Response:', response);
+      
+      if (response && response.success) {
+        setRequests(response.data || []);
+        console.log('✅ Requests loaded successfully:', response.data);
+      } else {
+        const errorMessage = response?.message || 'Failed to load requests';
+        console.error('❌ Error loading requests:', errorMessage);
+        showSnackbar(errorMessage, 'error');
+        setRequests([]);
+      }
     } catch (error) {
-      console.error('Error loading requests:', error);
-      // Fallback to mock data if API is not available
-      const mockRequests = [
-        {
-          id: 1,
-          selectedBins: [
-            { binType: 'general', quantity: 2, capacity: '120L' }
-          ],
-          specialInstructions: 'Please place near the gate',
-          contactPhone: '+94 77 123 4567',
-          contactEmail: user?.email || 'user@example.com',
-          address: '123 Main Street, Colombo 03',
-          status: 'pending',
-          requestDate: '2024-01-10',
-          adminNotes: ''
-        }
-      ];
-      setRequests(mockRequests);
-      showSnackbar('Using offline data - API not available', 'warning');
+      console.error('💥 Error loading requests:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Show more specific error message
+      let errorMessage = 'Error loading requests. Please check your connection and try again.';
+      if (error.response?.status === 403) {
+        errorMessage = 'Access denied. You are not authorized to view these requests.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'User not found. Please log in again.';
+      }
+      
+      showSnackbar(errorMessage, 'error');
+      setRequests([]);
     } finally {
       setLoading(false);
     }
@@ -192,24 +202,21 @@ const ResidentBinRequests = () => {
     if (request) {
       setEditingRequest(request);
       setFormData({
-        selectedBins: request.selectedBins || [{ 
-          binType: request.binType, 
-          quantity: request.quantity,
-          capacity: request.capacity || '120L'
-        }],
-        specialInstructions: request.specialInstructions,
-        contactPhone: request.contactPhone,
-        contactEmail: request.contactEmail,
-        address: request.address
+        selectedBins: request.selectedBins || [],
+        specialInstructions: request.specialInstructions || '',
+        contactPhone: request.contactPhone || '',
+        contactEmail: request.contactEmail || '',
+        address: request.address || ''
       });
     } else {
       setEditingRequest(null);
+      const userId = getUserId();
       setFormData({
         selectedBins: [],
         specialInstructions: '',
         contactPhone: user?.phone || user?.contactPhone || '',
         contactEmail: user?.email || user?.contactEmail || '',
-        address: user?.address?.full || user?.address?.street || user?.address || ''
+        address: user?.address?.street ? `${user.address.street}, ${user.address.city}, ${user.address.district}` : ''
       });
     }
     setOpenDialog(true);
@@ -218,13 +225,13 @@ const ResidentBinRequests = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingRequest(null);
-      setFormData({
-        selectedBins: [],
-        specialInstructions: '',
-        contactPhone: '',
-        contactEmail: '',
-        address: ''
-      });
+    setFormData({
+      selectedBins: [],
+      specialInstructions: '',
+      contactPhone: '',
+      contactEmail: '',
+      address: ''
+    });
   };
 
   const handleInputChange = (field) => (event) => {
@@ -236,11 +243,17 @@ const ResidentBinRequests = () => {
 
   const handleSubmit = async () => {
     try {
-      setLoading(true);
+      setSubmitting(true);
       
       // Validate form
       if (formData.selectedBins.length === 0) {
         showSnackbar('Please select at least one bin type', 'error');
+        return;
+      }
+
+      // Validate required fields
+      if (!formData.contactPhone || !formData.contactEmail || !formData.address) {
+        showSnackbar('Please fill in all required contact information', 'error');
         return;
       }
 
@@ -260,38 +273,68 @@ const ResidentBinRequests = () => {
         return;
       }
 
-      // Prepare request data for API
+      // Prepare request data for API - REMOVE userId from request data
+      // The backend will use req.user.id from the authenticated token
       const requestData = {
         selectedBins: formData.selectedBins,
         specialInstructions: formData.specialInstructions,
         contactPhone: formData.contactPhone,
         contactEmail: formData.contactEmail,
-        address: formData.address,
-        userId: user.id
+        address: formData.address
+        // userId is removed - backend will get it from auth token
       };
 
+      console.log('🚀 Submitting request data:', requestData);
+
+      let response;
       if (editingRequest) {
         // Update existing request
-        const requestId = editingRequest.id || editingRequest._id;
+        const requestId = editingRequest._id || editingRequest.id;
         if (!requestId) {
           throw new Error('Request ID not found');
         }
-        const response = await updateBinRequest(requestId, requestData);
-        setRequests(requests.map(req => (req.id || req._id) === requestId ? response.data : req));
-        showSnackbar('Request updated successfully', 'success');
+        response = await updateBinRequest(requestId, requestData);
+        console.log('📝 Update response:', response);
+        
+        if (response && response.success) {
+          setRequests(requests.map(req => (req._id || req.id) === requestId ? response.data : req));
+          showSnackbar('Request updated successfully', 'success');
+        } else {
+          throw new Error(response?.message || 'Failed to update request');
+        }
       } else {
         // Create new request
-        const response = await createBinRequest(requestData);
-        setRequests([response.data, ...requests]);
-        showSnackbar('Request submitted successfully', 'success');
+        response = await createBinRequest(requestData);
+        console.log('🆕 Create response:', response);
+        
+        if (response && response.success) {
+          setRequests([response.data, ...requests]);
+          showSnackbar('Request submitted successfully', 'success');
+        } else {
+          throw new Error(response?.message || 'Failed to create request');
+        }
       }
 
       handleCloseDialog();
     } catch (error) {
-      console.error('Error submitting request:', error);
-      showSnackbar('Error submitting request', 'error');
+      console.error('💥 Error submitting request:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Show more specific error message
+      let errorMessage = error.message || 'Error submitting request. Please try again.';
+      if (error.response?.status === 403) {
+        errorMessage = 'Access denied. You are not authorized to perform this action.';
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response.data?.message || 'Invalid request data. Please check your inputs.';
+      }
+      
+      showSnackbar(errorMessage, 'error');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -299,12 +342,31 @@ const ResidentBinRequests = () => {
     if (window.confirm('Are you sure you want to delete this request?')) {
       try {
         setLoading(true);
-        await deleteBinRequest(requestId);
-        setRequests(requests.filter(req => (req.id || req._id) !== requestId));
-        showSnackbar('Request deleted successfully', 'success');
+        const response = await deleteBinRequest(requestId);
+        console.log('🗑️ Delete response:', response);
+        
+        if (response && response.success) {
+          setRequests(requests.filter(req => (req._id || req.id) !== requestId));
+          showSnackbar('Request deleted successfully', 'success');
+        } else {
+          throw new Error(response?.message || 'Failed to delete request');
+        }
       } catch (error) {
-        console.error('Error deleting request:', error);
-        showSnackbar('Error deleting request', 'error');
+        console.error('💥 Error deleting request:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        
+        let errorMessage = error.message || 'Error deleting request';
+        if (error.response?.status === 403) {
+          errorMessage = 'Access denied. You are not authorized to delete this request.';
+        } else if (error.response?.status === 400) {
+          errorMessage = error.response.data?.message || 'Cannot delete request that is not pending.';
+        }
+        
+        showSnackbar(errorMessage, 'error');
       } finally {
         setLoading(false);
       }
@@ -329,6 +391,19 @@ const ResidentBinRequests = () => {
     );
   };
 
+  // Get user ID for display
+  const userId = getUserId();
+
+  // Debug information
+  // console.log('🔍 Current state:', {
+  //   userId,
+  //   userObject: user,
+  //   requestsCount: requests.length,
+  //   loading,
+  //   submitting,
+  //   openDialog
+  // });
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -345,6 +420,7 @@ const ResidentBinRequests = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
+          disabled={!userId}
           sx={{
             background: 'linear-gradient(45deg, #10b981, #059669)',
             '&:hover': {
@@ -358,6 +434,20 @@ const ResidentBinRequests = () => {
           New Request
         </Button>
       </Box>
+
+      {/* Debug Info - Remove in production */}
+      {/* <Card sx={{ mb: 2, bgcolor: '#fff3cd', border: '1px solid #ffeaa7' }}>
+        <CardContent>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+            🔍 Debug: User ID: {userId || 'Not found'} | Role: {user?.role || 'Unknown'} | Requests: {requests.length} | Loading: {loading.toString()}
+          </Typography>
+          {!userId && (
+            <Typography variant="caption" sx={{ color: '#dc3545', display: 'block', mt: 1 }}>
+              ⚠️ User ID not found. Please check authentication.
+            </Typography>
+          )}
+        </CardContent>
+      </Card> */}
 
       {/* Quick Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -418,27 +508,36 @@ const ResidentBinRequests = () => {
             Your Bin Requests
           </Typography>
           
-          {requests.length === 0 ? (
+          {loading ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CircularProgress sx={{ mb: 2 }} />
+              <Typography variant="h6" sx={{ color: '#6b7280' }}>
+                Loading your requests...
+              </Typography>
+            </Box>
+          ) : requests.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="h6" sx={{ color: '#6b7280', mb: 2 }}>
                 No requests found
               </Typography>
               <Typography variant="body2" sx={{ color: '#9ca3af', mb: 3 }}>
-                Submit your first bin request to get started
+                {userId ? 'Submit your first bin request to get started' : 'Please log in to view your requests'}
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => handleOpenDialog()}
-                sx={{
-                  background: 'linear-gradient(45deg, #10b981, #059669)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #059669, #047857)',
-                  }
-                }}
-              >
-                Create Request
-              </Button>
+              {userId && (
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleOpenDialog()}
+                  sx={{
+                    background: 'linear-gradient(45deg, #10b981, #059669)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #059669, #047857)',
+                    }
+                  }}
+                >
+                  Create Request
+                </Button>
+              )}
             </Box>
           ) : (
             <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
@@ -447,7 +546,6 @@ const ResidentBinRequests = () => {
                   <TableRow sx={{ background: '#f8fafc' }}>
                     <TableCell sx={{ fontWeight: 600 }}>Bin Type</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Quantity</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Preferred Date</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Request Date</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
@@ -455,17 +553,21 @@ const ResidentBinRequests = () => {
                 </TableHead>
                 <TableBody>
                   {requests.map((request, index) => (
-                    <TableRow key={request.id || request._id || index} hover>
+                    <TableRow key={request._id || request.id || index} hover>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 500, component: 'div' }}>
-                          {request.selectedBins ? 
-                            request.selectedBins.map(bin => getBinTypeLabel(bin.binType)).join(', ') :
-                            getBinTypeLabel(request.binType)
+                          {request.selectedBins && request.selectedBins.length > 0 ? 
+                            request.selectedBins.map((bin, idx) => (
+                              <Box key={idx} sx={{ mb: 0.5 }}>
+                                {getBinTypeLabel(bin.binType)} ({bin.quantity}x {bin.capacity})
+                              </Box>
+                            )) :
+                            'No bins selected'
                           }
                         </Typography>
                         {request.specialInstructions && (
-                          <Typography variant="caption" sx={{ color: '#6b7280', component: 'div' }}>
-                            {request.specialInstructions}
+                          <Typography variant="caption" sx={{ color: '#6b7280', component: 'div', mt: 0.5 }}>
+                            📝 {request.specialInstructions}
                           </Typography>
                         )}
                       </TableCell>
@@ -473,24 +575,30 @@ const ResidentBinRequests = () => {
                         <Typography variant="body2" component="div">
                           {request.selectedBins ? 
                             request.selectedBins.reduce((total, bin) => total + bin.quantity, 0) :
-                            request.quantity
-                          }
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" component="div">
-                          {request.requestDate ? 
-                            new Date(request.requestDate).toLocaleDateString() :
-                            'N/A'
+                            1
                           }
                         </Typography>
                       </TableCell>
                       <TableCell>
                         {getStatusChip(request.status)}
+                        {request.adminNotes && (
+                          <Tooltip title={request.adminNotes}>
+                            <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', mt: 0.5 }}>
+                              💬 Admin Note
+                            </Typography>
+                          </Tooltip>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" component="div">
-                          {new Date(request.requestDate).toLocaleDateString()}
+                          {request.createdAt ? 
+                            new Date(request.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            }) :
+                            'N/A'
+                          }
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -518,7 +626,7 @@ const ResidentBinRequests = () => {
                               <Tooltip title="Delete">
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleDeleteRequest(request.id || request._id)}
+                                  onClick={() => handleDeleteRequest(request._id || request.id)}
                                   sx={{ color: '#ef4444' }}
                                 >
                                   <DeleteIcon />
@@ -540,49 +648,14 @@ const ResidentBinRequests = () => {
       {/* Request Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editingRequest ? 'Edit Bin Request' : 'New Bin Request'}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {editingRequest ? 'Edit Bin Request' : 'New Bin Request'}
+            {!userId && (
+              <Chip label="Not logged in" color="error" size="small" />
+            )}
+          </Box>
         </DialogTitle>
         <DialogContent>
-          {/* Progress Indicator */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ 
-                width: 8, 
-                height: 8, 
-                borderRadius: '50%', 
-                background: formData.selectedBins.length > 0 ? '#10b981' : '#e5e7eb',
-                mr: 1 
-              }} />
-              <Typography variant="body2" sx={{ color: formData.selectedBins.length > 0 ? '#10b981' : '#6b7280' }}>
-                Select Bin Types ({formData.selectedBins.length} selected)
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ 
-                width: 8, 
-                height: 8, 
-                borderRadius: '50%', 
-                background: formData.selectedBins.length > 0 ? '#10b981' : '#e5e7eb',
-                mr: 1 
-              }} />
-              <Typography variant="body2" sx={{ color: formData.selectedBins.length > 0 ? '#10b981' : '#6b7280' }}>
-                Set Quantities
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Box sx={{ 
-                width: 8, 
-                height: 8, 
-                borderRadius: '50%', 
-                background: formData.address ? '#10b981' : '#e5e7eb',
-                mr: 1 
-              }} />
-              <Typography variant="body2" sx={{ color: formData.address ? '#10b981' : '#6b7280' }}>
-                Contact & Address
-              </Typography>
-            </Box>
-          </Box>
-
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#1f2937' }}>
@@ -606,13 +679,11 @@ const ResidentBinRequests = () => {
                         }}
                         onClick={() => {
                           if (isSelected) {
-                            // Remove from selection
                             setFormData({
                               ...formData,
                               selectedBins: formData.selectedBins.filter(bin => bin.binType !== type.value)
                             });
                           } else {
-                            // Add to selection with default quantity 1 and default capacity
                             setFormData({
                               ...formData,
                               selectedBins: [...formData.selectedBins, { 
@@ -628,12 +699,12 @@ const ResidentBinRequests = () => {
                           <Typography variant="h4" sx={{ mb: 1 }}>
                             {type.icon}
                           </Typography>
-                           <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: type.color }}>
-                             {type.label}
-                           </Typography>
-                           <Typography variant="body2" sx={{ color: '#6b7280', mb: 1 }}>
-                             {type.description}
-                           </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: type.color }}>
+                            {type.label}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#6b7280', mb: 1 }}>
+                            {type.description}
+                          </Typography>
                           {isSelected && (
                             <Chip 
                               label="Selected" 
@@ -663,56 +734,54 @@ const ResidentBinRequests = () => {
                   {formData.selectedBins.map((selectedBin, index) => {
                     const binType = binTypes.find(type => type.value === selectedBin.binType);
                     return (
-                      <Grid item xs={12} sm={6} md={4} key={selectedBin.binType}>
+                      <Grid item xs={12} sm={6} md={4} key={`${selectedBin.binType}-${index}`}>
                         <Card sx={{ 
                           border: `1px solid ${binType.color}30`,
                           background: `${binType.color}05`
                         }}>
                           <CardContent>
-                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                               <Typography variant="h5" sx={{ mr: 1 }}>
-                                 {binType.icon}
-                               </Typography>
-                               <Box sx={{ flex: 1 }}>
-                                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: binType.color }}>
-                                   {binType.label}
-                                 </Typography>
-                               </Box>
-                             </Box>
-                             <Grid container spacing={2}>
-                               <Grid item xs={6}>
-                                 <TextField
-                                   fullWidth
-                                   label="Qty"
-                                   type="number"
-                                   value={selectedBin.quantity}
-                                   onChange={(e) => {
-                                     const newSelectedBins = [...formData.selectedBins];
-                                     newSelectedBins[index].quantity = parseInt(e.target.value) || 1;
-                                     setFormData({ ...formData, selectedBins: newSelectedBins });
-                                   }}
-                                   inputProps={{ min: 1, max: 10 }}
-                                   size="small"
-                                   helperText="Max 10"
-                                 />
-                               </Grid>
-                               <Grid item xs={6}>
-                                 <TextField
-                                   fullWidth
-                                   label="Capacity (L)"
-                                   type="number"
-                                   value={selectedBin.capacity?.replace('L', '') || ''}
-                                   onChange={(e) => {
-                                     const newSelectedBins = [...formData.selectedBins];
-                                     newSelectedBins[index].capacity = `${e.target.value}L`;
-                                     setFormData({ ...formData, selectedBins: newSelectedBins });
-                                   }}
-                                   inputProps={{ min: 10, max: 500 }}
-                                   size="small"
-                                   helperText="10-500L"
-                                 />
-                               </Grid>
-                             </Grid>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                              <Typography variant="h5" sx={{ mr: 1 }}>
+                                {binType.icon}
+                              </Typography>
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: binType.color }}>
+                                  {binType.label}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Grid container spacing={2}>
+                              <Grid item xs={6}>
+                                <TextField
+                                  fullWidth
+                                  label="Quantity"
+                                  type="number"
+                                  value={selectedBin.quantity}
+                                  onChange={(e) => {
+                                    const newSelectedBins = [...formData.selectedBins];
+                                    newSelectedBins[index].quantity = parseInt(e.target.value) || 1;
+                                    setFormData({ ...formData, selectedBins: newSelectedBins });
+                                  }}
+                                  inputProps={{ min: 1, max: 10 }}
+                                  size="small"
+                                />
+                              </Grid>
+                              <Grid item xs={6}>
+                                <TextField
+                                  fullWidth
+                                  label="Capacity (L)"
+                                  type="number"
+                                  value={selectedBin.capacity?.replace('L', '') || ''}
+                                  onChange={(e) => {
+                                    const newSelectedBins = [...formData.selectedBins];
+                                    newSelectedBins[index].capacity = `${e.target.value}L`;
+                                    setFormData({ ...formData, selectedBins: newSelectedBins });
+                                  }}
+                                  inputProps={{ min: 10, max: 500 }}
+                                  size="small"
+                                />
+                              </Grid>
+                            </Grid>
                           </CardContent>
                         </Card>
                       </Grid>
@@ -721,57 +790,42 @@ const ResidentBinRequests = () => {
                 </Grid>
               </Grid>
             )}
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Contact Phone"
+                label="Contact Phone *"
                 value={formData.contactPhone}
                 onChange={handleInputChange('contactPhone')}
                 placeholder="+94 77 123 4567"
-                helperText={user?.phone ? "Phone fetched from your profile" : "Enter your contact phone number"}
-                InputProps={{
-                  startAdornment: user?.phone ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-                      <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
-                    </Box>
-                  ) : null
-                }}
+                required
+                error={!formData.contactPhone}
+                helperText={!formData.contactPhone ? "Contact phone is required" : ""}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Contact Email"
+                label="Contact Email *"
                 type="email"
                 value={formData.contactEmail}
                 onChange={handleInputChange('contactEmail')}
-                helperText={user?.email ? "Email fetched from your profile" : "Enter your contact email"}
-                InputProps={{
-                  startAdornment: user?.email ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-                      <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
-                    </Box>
-                  ) : null
-                }}
+                required
+                error={!formData.contactEmail}
+                helperText={!formData.contactEmail ? "Contact email is required" : ""}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Address"
+                label="Delivery Address *"
                 value={formData.address}
                 onChange={handleInputChange('address')}
                 multiline
                 rows={2}
                 required
-                helperText={user?.address ? "Address fetched from your profile" : "Please enter your delivery address"}
-                InputProps={{
-                  startAdornment: user?.address ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-                      <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
-                    </Box>
-                  ) : null
-                }}
+                error={!formData.address}
+                helperText={!formData.address ? "Delivery address is required" : ""}
               />
             </Grid>
             <Grid item xs={12}>
@@ -783,77 +837,18 @@ const ResidentBinRequests = () => {
                 multiline
                 rows={3}
                 placeholder="Any special requirements or instructions for bin placement..."
-                helperText="Optional: Provide specific placement instructions, access requirements, or special handling needs"
               />
-            </Grid>
-
-            {/* Information Card */}
-            <Grid item xs={12}>
-              <Card sx={{ 
-                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                border: '1px solid #0ea5e9',
-                borderRadius: 2
-              }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                    <InfoIcon sx={{ color: '#0ea5e9', mt: 0.5 }} />
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: '#0c4a6e', mb: 1 }}>
-                        Request Process Information
-                      </Typography>
-                      <List dense>
-                        <ListItem sx={{ py: 0 }}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary="Review Time: 1-2 business days"
-                            primaryTypographyProps={{ variant: 'body2', color: '#0c4a6e', component: 'span' }}
-                          />
-                        </ListItem>
-                        <ListItem sx={{ py: 0 }}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary="Delivery: 3-5 business days after approval"
-                            primaryTypographyProps={{ variant: 'body2', color: '#0c4a6e', component: 'span' }}
-                          />
-                        </ListItem>
-                        <ListItem sx={{ py: 0 }}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary="Free bins: General, Recyclable, Organic"
-                            primaryTypographyProps={{ variant: 'body2', color: '#0c4a6e', component: 'span' }}
-                          />
-                        </ListItem>
-                        <ListItem sx={{ py: 0 }}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            <WarningIcon sx={{ color: '#f59e0b', fontSize: 20 }} />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary="Paid bins: Hazardous (Rs. 500/month), Medical (Rs. 800/month)"
-                            primaryTypographyProps={{ variant: 'body2', color: '#0c4a6e', component: 'span' }}
-                          />
-                        </ListItem>
-                      </List>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleCloseDialog} color="inherit">
+          <Button onClick={handleCloseDialog} color="inherit" disabled={submitting}>
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={loading}
+            disabled={submitting || formData.selectedBins.length === 0 || !userId}
             sx={{
               background: 'linear-gradient(45deg, #10b981, #059669)',
               '&:hover': {
@@ -861,7 +856,7 @@ const ResidentBinRequests = () => {
               }
             }}
           >
-            {loading ? 'Saving...' : (editingRequest ? 'Update Request' : 'Submit Request')}
+            {submitting ? <CircularProgress size={24} /> : (editingRequest ? 'Update Request' : 'Submit Request')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -253,13 +253,29 @@ export const updateBinRequestStatus = async (id, status, adminNotes = '') => {
   return response.data;
 };
 
+// export const getBinRequestsByUser = async (userId) => {
+//   const response = await api.get(`/bin-requests/user/${userId}`);
+//   return response.data;
+// };
+
+// Bin Requests API
 export const getBinRequestsByUser = async (userId) => {
-  const response = await api.get(`/bin-requests/user/${userId}`);
-  return response.data;
+  try {
+    const response = await api.get(`/bin-requests/user/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching bin requests:', error);
+    throw error;
+  }
 };
 
 export const getBinRequestsByStatus = async (status) => {
   const response = await api.get(`/bin-requests/status/${status}`);
+  return response.data;
+};
+
+export const getBinsByUser = async (userId) => {
+  const response = await api.get(`/bins/user/${userId}`);
   return response.data;
 };
 

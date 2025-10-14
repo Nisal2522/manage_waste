@@ -9,20 +9,20 @@ import {
   useMediaQuery
 } from '@mui/material';
 import {
-  Notifications
+  Menu as MenuIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext.jsx';
-import Sidebar from './Sidebar.jsx';
-import '../../styles/layout.css';
+import UniversalSidebar from './UniversalSidebar.jsx';
 
 const LayoutWrapper = ({ children }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true); // Default to open
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Auto-collapse on mobile
+  // Auto-close on mobile, open on desktop
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false);
@@ -31,29 +31,8 @@ const LayoutWrapper = ({ children }) => {
     }
   }, [isMobile]);
 
-  // Get CSS class for main content based on sidebar state
-  const getMainContentClass = () => {
-    if (isMobile) {
-      return 'main-content sidebar-hidden';
-    }
-    
-    if (!sidebarOpen) {
-      return 'main-content sidebar-hidden';
-    }
-    
-    if (sidebarCollapsed) {
-      return 'main-content sidebar-collapsed';
-    }
-    
-    return 'main-content sidebar-expanded';
-  };
-
-  const handleSidebarClose = () => {
-    setSidebarOpen(false);
-  };
-
-  const handleToggleCollapse = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
+  const handleToggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   // Don't show sidebar for unauthenticated users or on landing pages
@@ -61,48 +40,66 @@ const LayoutWrapper = ({ children }) => {
     return <>{children}</>;
   }
 
-  const getRoleDisplayName = () => {
-    switch (user?.role) {
-      case 'admin': return 'Administrator';
-      case 'staff': return 'Staff Member';
-      case 'resident': return 'Resident';
-      default: return 'User';
-    }
-  };
-
   return (
     <Box sx={{ 
       display: 'flex', 
       minHeight: '100vh',
-      flexDirection: 'row',
       width: '100%'
     }}>
-      {/* Fixed Sidebar */}
-      <Sidebar 
+      {/* Static Sidebar */}
+      <UniversalSidebar 
         open={sidebarOpen} 
-        onClose={handleSidebarClose}
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={handleToggleCollapse}
+        onClose={() => setSidebarOpen(false)}
+        onToggle={handleToggleSidebar}
+        isMobile={isMobile}
       />
       
       {/* Main Content */}
       <Box 
+        component="main"
         sx={{ 
-          flex: 1,
+          flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
-          marginLeft: 0,  // No margin - content starts from left edge
-          width: '100%', // Full width - content takes full available space
-          transition: 'all 0.3s ease',
+          transition: theme.transitions.create(['margin', 'width'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
+          marginLeft: sidebarOpen ? '280px' : '0px',
+          width: sidebarOpen ? 'calc(100% - 280px)' : '100%',
           minHeight: '100vh',
-          position: 'relative',
-          zIndex: 1  // Ensure content is above sidebar
+          position: 'relative'
         }}
       >
-        {/* Header removed as requested */}
+        {/* Header with Toggle Button */}
+        <AppBar 
+          position="static" 
+          elevation={1}
+          sx={{ 
+            background: 'white',
+            color: 'text.primary',
+            borderBottom: '1px solid',
+            borderColor: 'divider'
+          }}
+        >
+          <Toolbar>
+            <IconButton
+              edge="start"
+              color="inherit"
+              aria-label="toggle sidebar"
+              onClick={handleToggleSidebar}
+              sx={{ mr: 2 }}
+            >
+              {sidebarOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            </IconButton>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: 'text.primary' }}>
+              Waste Management System
+            </Typography>
+          </Toolbar>
+        </AppBar>
 
         {/* Page Content */}
-        <Box component="main" sx={{ flexGrow: 1 }}>
+        <Box sx={{ flexGrow: 1, p: 3 }}>
           {children}
         </Box>
       </Box>
