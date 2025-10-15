@@ -9,7 +9,7 @@ import {
   getBinRequestsByUser,
   getBinRequestsByStatus
 } from '../controllers/binRequestController.js';
-import { authenticateToken } from '../middleware/auth.js'; // Fixed middleware import
+import { authenticateToken } from '../middleware/authMiddleware.js'; // Fixed middleware import
 
 const router = express.Router();
 
