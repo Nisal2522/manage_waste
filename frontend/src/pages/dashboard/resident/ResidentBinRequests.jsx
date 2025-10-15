@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -6,7 +6,6 @@ import {
   CardContent,
   Button,
   TextField,
-  Grid,
   Chip,
   Alert,
   Snackbar,
@@ -113,54 +112,38 @@ const ResidentBinRequests = () => {
   };
 
   // Get user ID - handle both id and _id
-  const getUserId = () => {
+  const getUserId = useCallback(() => {
     return user?.id || user?._id;
-  };
-
-  // Debug user object
-  // useEffect(() => {
-  //   console.log('👤 User object from AuthContext:', user);
-  //   console.log('🆔 User ID:', getUserId());
-  //   console.log('🔑 Token from localStorage:', localStorage.getItem('token'));
-  // }, [user]);
-
-  // Load requests on component mount and when user changes
-  useEffect(() => {
-    const userId = getUserId();
-    if (userId) {
-      loadRequests();
-    }
   }, [user]);
 
-  // Auto-populate form with user data when user is available
-  useEffect(() => {
-    const userId = getUserId();
-    if (user && !openDialog) {
-      setFormData(prevFormData => ({
-        ...prevFormData,
-        contactPhone: user?.phone || user?.contactPhone || prevFormData.contactPhone,
-        contactEmail: user?.email || user?.contactEmail || prevFormData.contactEmail,
-        address: user?.address?.street ? `${user.address.street}, ${user.address.city}, ${user.address.district}` : prevFormData.address
-      }));
-    }
-  }, [user, openDialog]);
+  const showSnackbar = useCallback((message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  }, []);
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     setLoading(true);
     try {
       const userId = getUserId();
       if (!userId) {
+        console.log('❌ No user ID found');
         showSnackbar('User not found. Please log in again.', 'error');
         return;
       }
       
       console.log('🔍 Loading requests for user ID:', userId);
+      console.log('🔑 Auth token present:', !!localStorage.getItem('token'));
+      
       const response = await getBinRequestsByUser(userId);
       console.log('📦 API Response:', response);
       
       if (response && response.success) {
-        setRequests(response.data || []);
-        console.log('✅ Requests loaded successfully:', response.data);
+        const requestsData = response.data || [];
+        setRequests(requestsData);
+        console.log('✅ Requests loaded successfully:', requestsData.length, 'requests found');
+        
+        if (requestsData.length === 0) {
+          console.log('ℹ️ No requests found for this user');
+        }
       } else {
         const errorMessage = response?.message || 'Failed to load requests';
         console.error('❌ Error loading requests:', errorMessage);
@@ -172,7 +155,8 @@ const ResidentBinRequests = () => {
       console.error('Error details:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        url: error.config?.url
       });
       
       // Show more specific error message
@@ -181,6 +165,10 @@ const ResidentBinRequests = () => {
         errorMessage = 'Access denied. You are not authorized to view these requests.';
       } else if (error.response?.status === 404) {
         errorMessage = 'User not found. Please log in again.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (!error.response) {
+        errorMessage = 'Network error. Please check if the server is running.';
       }
       
       showSnackbar(errorMessage, 'error');
@@ -188,11 +176,30 @@ const ResidentBinRequests = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getUserId, showSnackbar]);
 
-  const showSnackbar = (message, severity = 'success') => {
-    setSnackbar({ open: true, message, severity });
-  };
+  // Load requests on component mount and when user changes
+  useEffect(() => {
+    const userId = getUserId();
+    if (userId) {
+      console.log('🔄 Loading requests for user:', userId);
+      loadRequests();
+    } else {
+      console.log('⚠️ No user ID found, cannot load requests');
+    }
+  }, [user, getUserId, loadRequests]);
+
+  // Auto-populate form with user data when user is available
+  useEffect(() => {
+    if (user && !openDialog) {
+      setFormData(prevFormData => ({
+        ...prevFormData,
+        contactPhone: user?.phone || user?.contactPhone || prevFormData.contactPhone,
+        contactEmail: user?.email || user?.contactEmail || prevFormData.contactEmail,
+        address: user?.address?.street ? `${user.address.street}, ${user.address.city}, ${user.address.district}` : prevFormData.address
+      }));
+    }
+  }, [user, openDialog]);
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
@@ -210,7 +217,6 @@ const ResidentBinRequests = () => {
       });
     } else {
       setEditingRequest(null);
-      const userId = getUserId();
       setFormData({
         selectedBins: [],
         specialInstructions: '',
@@ -409,125 +415,110 @@ const ResidentBinRequests = () => {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1f2937', mb: 1 }}>
+          <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 1 }}>
             Bin Requests
           </Typography>
-          <Typography variant="body1" sx={{ color: '#6b7280' }}>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
             Request new waste bins for your property
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-          disabled={!userId}
-          sx={{
-            background: 'linear-gradient(45deg, #10b981, #059669)',
-            '&:hover': {
-              background: 'linear-gradient(45deg, #059669, #047857)',
-            },
-            px: 3,
-            py: 1.5,
-            borderRadius: 2
-          }}
-        >
-          New Request
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            onClick={loadRequests}
+            disabled={loading}
+            variant="outlined"
+            sx={{
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+                backgroundColor: 'primary.light',
+              },
+              '&:disabled': {
+                opacity: 0.5,
+                cursor: 'not-allowed'
+              }
+            }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Button
+            onClick={() => handleOpenDialog()}
+            disabled={!userId}
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{
+              background: 'linear-gradient(45deg, #10b981, #059669)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #059669, #047857)',
+              },
+              '&:disabled': {
+                opacity: 0.5,
+                cursor: 'not-allowed'
+              }
+            }}
+          >
+            New Request
+          </Button>
+        </Box>
       </Box>
 
-      {/* Debug Info - Remove in production */}
-      {/* <Card sx={{ mb: 2, bgcolor: '#fff3cd', border: '1px solid #ffeaa7' }}>
-        <CardContent>
-          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-            🔍 Debug: User ID: {userId || 'Not found'} | Role: {user?.role || 'Unknown'} | Requests: {requests.length} | Loading: {loading.toString()}
-          </Typography>
-          {!userId && (
-            <Typography variant="caption" sx={{ color: '#dc3545', display: 'block', mt: 1 }}>
-              ⚠️ User ID not found. Please check authentication.
-            </Typography>
-          )}
-        </CardContent>
-      </Card> */}
 
       {/* Quick Stats */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)' }}>
-            <CardContent>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
-                {requests.length}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                Total Requests
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-            <CardContent>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
-                {requests.filter(r => r.status === 'pending').length}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                Pending
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-            <CardContent>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
-                {requests.filter(r => r.status === 'approved').length}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                Approved
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
-            <CardContent>
-              <Typography variant="h4" sx={{ color: 'white', fontWeight: 700 }}>
-                {requests.filter(r => r.status === 'completed').length}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                Completed
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg p-6 text-white shadow-lg h-36 flex flex-col justify-center items-center text-center">
+          <div className="text-4xl font-bold mb-2">
+            {requests.length}
+          </div>
+          <div className="text-blue-100">
+            Total Requests
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg p-6 text-white shadow-lg h-36 flex flex-col justify-center items-center text-center">
+          <div className="text-4xl font-bold mb-2">
+            {requests.filter(r => r.status === 'pending').length}
+          </div>
+          <div className="text-amber-100">
+            Pending
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg p-6 text-white shadow-lg h-36 flex flex-col justify-center items-center text-center">
+          <div className="text-4xl font-bold mb-2">
+            {requests.filter(r => r.status === 'approved').length}
+          </div>
+          <div className="text-emerald-100">
+            Approved
+          </div>
+        </div>
+      </div>
 
       {/* Requests Table */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+      <Card sx={{ boxShadow: 3 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
             Your Bin Requests
           </Typography>
           
           {loading ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <CircularProgress sx={{ mb: 2 }} />
-              <Typography variant="h6" sx={{ color: '#6b7280' }}>
+              <Typography variant="h6" sx={{ color: 'text.secondary' }}>
                 Loading your requests...
               </Typography>
             </Box>
           ) : requests.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="h6" sx={{ color: '#6b7280', mb: 2 }}>
+              <Typography variant="h6" sx={{ color: 'text.secondary', mb: 1 }}>
                 No requests found
               </Typography>
-              <Typography variant="body2" sx={{ color: '#9ca3af', mb: 3 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
                 {userId ? 'Submit your first bin request to get started' : 'Please log in to view your requests'}
               </Typography>
               {userId && (
                 <Button
+                  onClick={() => handleOpenDialog()}
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => handleOpenDialog()}
                   sx={{
                     background: 'linear-gradient(45deg, #10b981, #059669)',
                     '&:hover': {
@@ -540,22 +531,22 @@ const ResidentBinRequests = () => {
               )}
             </Box>
           ) : (
-            <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+            <TableContainer component={Paper} sx={{ boxShadow: 'none' }}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ background: '#f8fafc' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Bin Type</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Quantity</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Request Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                  <TableRow sx={{ backgroundColor: 'grey.50' }}>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Bin Type</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Quantity</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Request Date</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {requests.map((request, index) => (
-                    <TableRow key={request._id || request.id || index} hover>
+                    <TableRow key={request._id || request.id || index} sx={{ '&:hover': { backgroundColor: 'grey.50' } }}>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500, component: 'div' }}>
+                        <Box sx={{ fontWeight: 500 }}>
                           {request.selectedBins && request.selectedBins.length > 0 ? 
                             request.selectedBins.map((bin, idx) => (
                               <Box key={idx} sx={{ mb: 0.5 }}>
@@ -564,15 +555,15 @@ const ResidentBinRequests = () => {
                             )) :
                             'No bins selected'
                           }
-                        </Typography>
+                        </Box>
                         {request.specialInstructions && (
-                          <Typography variant="caption" sx={{ color: '#6b7280', component: 'div', mt: 0.5 }}>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                             📝 {request.specialInstructions}
                           </Typography>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" component="div">
+                        <Typography variant="body2">
                           {request.selectedBins ? 
                             request.selectedBins.reduce((total, bin) => total + bin.quantity, 0) :
                             1
@@ -582,15 +573,13 @@ const ResidentBinRequests = () => {
                       <TableCell>
                         {getStatusChip(request.status)}
                         {request.adminNotes && (
-                          <Tooltip title={request.adminNotes}>
-                            <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', mt: 0.5 }}>
-                              💬 Admin Note
-                            </Typography>
-                          </Tooltip>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }} title={request.adminNotes}>
+                            💬 Admin Note
+                          </Typography>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" component="div">
+                        <Typography variant="body2">
                           {request.createdAt ? 
                             new Date(request.createdAt).toLocaleDateString('en-US', {
                               year: 'numeric',
@@ -605,9 +594,8 @@ const ResidentBinRequests = () => {
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Tooltip title="View Details">
                             <IconButton
-                              size="small"
                               onClick={() => handleOpenDialog(request)}
-                              sx={{ color: '#3b82f6' }}
+                              sx={{ color: 'primary.main', '&:hover': { backgroundColor: 'primary.light' } }}
                             >
                               <ViewIcon />
                             </IconButton>
@@ -616,18 +604,16 @@ const ResidentBinRequests = () => {
                             <>
                               <Tooltip title="Edit">
                                 <IconButton
-                                  size="small"
                                   onClick={() => handleOpenDialog(request)}
-                                  sx={{ color: '#f59e0b' }}
+                                  sx={{ color: 'warning.main', '&:hover': { backgroundColor: 'warning.light' } }}
                                 >
                                   <EditIcon />
                                 </IconButton>
                               </Tooltip>
                               <Tooltip title="Delete">
                                 <IconButton
-                                  size="small"
                                   onClick={() => handleDeleteRequest(request._id || request.id)}
-                                  sx={{ color: '#ef4444' }}
+                                  sx={{ color: 'error.main', '&:hover': { backgroundColor: 'error.light' } }}
                                 >
                                   <DeleteIcon />
                                 </IconButton>
@@ -656,16 +642,16 @@ const ResidentBinRequests = () => {
           </Box>
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
+          <div className="grid grid-cols-1 gap-6 mt-4">
+            <div className="col-span-1">
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#1f2937' }}>
                 Select Bin Types (You can select multiple)
               </Typography>
-              <Grid container spacing={2}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {binTypes.map((type) => {
                   const isSelected = formData.selectedBins.some(bin => bin.binType === type.value);
                   return (
-                    <Grid item xs={12} sm={6} md={4} key={type.value}>
+                    <div key={type.value}>
                       <Card
                         sx={{
                           cursor: 'pointer',
@@ -718,23 +704,23 @@ const ResidentBinRequests = () => {
                           )}
                         </CardContent>
                       </Card>
-                    </Grid>
+                    </div>
                   );
                 })}
-              </Grid>
-            </Grid>
+              </div>
+            </div>
 
             {/* Quantity Selection for Selected Bins */}
             {formData.selectedBins.length > 0 && (
-              <Grid item xs={12}>
+              <div className="col-span-1">
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#1f2937' }}>
                   Set Quantities for Selected Bins
                 </Typography>
-                <Grid container spacing={2}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {formData.selectedBins.map((selectedBin, index) => {
                     const binType = binTypes.find(type => type.value === selectedBin.binType);
                     return (
-                      <Grid item xs={12} sm={6} md={4} key={`${selectedBin.binType}-${index}`}>
+                      <div key={`${selectedBin.binType}-${index}`}>
                         <Card sx={{ 
                           border: `1px solid ${binType.color}30`,
                           background: `${binType.color}05`
@@ -750,8 +736,8 @@ const ResidentBinRequests = () => {
                                 </Typography>
                               </Box>
                             </Box>
-                            <Grid container spacing={2}>
-                              <Grid item xs={6}>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
                                 <TextField
                                   fullWidth
                                   label="Quantity"
@@ -765,8 +751,8 @@ const ResidentBinRequests = () => {
                                   inputProps={{ min: 1, max: 10 }}
                                   size="small"
                                 />
-                              </Grid>
-                              <Grid item xs={6}>
+                              </div>
+                              <div>
                                 <TextField
                                   fullWidth
                                   label="Capacity (L)"
@@ -780,42 +766,44 @@ const ResidentBinRequests = () => {
                                   inputProps={{ min: 10, max: 500 }}
                                   size="small"
                                 />
-                              </Grid>
-                            </Grid>
+                              </div>
+                            </div>
                           </CardContent>
                         </Card>
-                      </Grid>
+                      </div>
                     );
                   })}
-                </Grid>
-              </Grid>
+                </div>
+              </div>
             )}
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Contact Phone *"
-                value={formData.contactPhone}
-                onChange={handleInputChange('contactPhone')}
-                placeholder="+94 77 123 4567"
-                required
-                error={!formData.contactPhone}
-                helperText={!formData.contactPhone ? "Contact phone is required" : ""}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Contact Email *"
-                type="email"
-                value={formData.contactEmail}
-                onChange={handleInputChange('contactEmail')}
-                required
-                error={!formData.contactEmail}
-                helperText={!formData.contactEmail ? "Contact email is required" : ""}
-              />
-            </Grid>
-            <Grid item xs={12}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <TextField
+                  fullWidth
+                  label="Contact Phone *"
+                  value={formData.contactPhone}
+                  onChange={handleInputChange('contactPhone')}
+                  placeholder="+94 77 123 4567"
+                  required
+                  error={!formData.contactPhone}
+                  helperText={!formData.contactPhone ? "Contact phone is required" : ""}
+                />
+              </div>
+              <div>
+                <TextField
+                  fullWidth
+                  label="Contact Email *"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={handleInputChange('contactEmail')}
+                  required
+                  error={!formData.contactEmail}
+                  helperText={!formData.contactEmail ? "Contact email is required" : ""}
+                />
+              </div>
+            </div>
+            <div>
               <TextField
                 fullWidth
                 label="Delivery Address *"
@@ -827,8 +815,8 @@ const ResidentBinRequests = () => {
                 error={!formData.address}
                 helperText={!formData.address ? "Delivery address is required" : ""}
               />
-            </Grid>
-            <Grid item xs={12}>
+            </div>
+            <div>
               <TextField
                 fullWidth
                 label="Special Instructions"
@@ -838,8 +826,8 @@ const ResidentBinRequests = () => {
                 rows={3}
                 placeholder="Any special requirements or instructions for bin placement..."
               />
-            </Grid>
-          </Grid>
+            </div>
+          </div>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={handleCloseDialog} color="inherit" disabled={submitting}>
