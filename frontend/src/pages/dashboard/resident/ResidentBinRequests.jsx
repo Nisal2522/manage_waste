@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -123,18 +123,30 @@ const ResidentBinRequests = () => {
   const loadRequests = useCallback(async () => {
     setLoading(true);
     try {
-      const userId = getUserId();
+      const userId = user?.id || user?._id || user?.user?.id || user?.user?._id;
       if (!userId) {
         console.log('❌ No user ID found');
-        showSnackbar('User not found. Please log in again.', 'error');
+        console.log('❌ User object:', user);
+        setSnackbar({ open: true, message: 'User not found. Please log in again.', severity: 'error' });
         return;
       }
       
       console.log('🔍 Loading requests for user ID:', userId);
       console.log('🔑 Auth token present:', !!localStorage.getItem('token'));
       
-      const response = await getBinRequestsByUser(userId);
+      console.log('🚀 Making API call to:', `/api/bin-requests/user/${userId}`);
+      
+      // Add timeout to the API call
+      const response = await Promise.race([
+        getBinRequestsByUser(userId),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('API call timeout after 10 seconds')), 10000)
+        )
+      ]);
+      
       console.log('📦 API Response:', response);
+      console.log('📦 Response type:', typeof response);
+      console.log('📦 Response keys:', Object.keys(response || {}));
       
       if (response && response.success) {
         const requestsData = response.data || [];
@@ -147,7 +159,7 @@ const ResidentBinRequests = () => {
       } else {
         const errorMessage = response?.message || 'Failed to load requests';
         console.error('❌ Error loading requests:', errorMessage);
-        showSnackbar(errorMessage, 'error');
+        setSnackbar({ open: true, message: errorMessage, severity: 'error' });
         setRequests([]);
       }
     } catch (error) {
@@ -171,23 +183,102 @@ const ResidentBinRequests = () => {
         errorMessage = 'Network error. Please check if the server is running.';
       }
       
-      showSnackbar(errorMessage, 'error');
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
       setRequests([]);
     } finally {
       setLoading(false);
     }
-  }, [getUserId, showSnackbar]);
+  }, [user?.id, user?._id, user?.user?.id, user?.user?._id]); // Depend on all possible user ID paths
+
+  // Use a ref to track if we've already loaded requests to prevent loops
+  const hasLoaded = useRef(false);
 
   // Load requests on component mount and when user changes
   useEffect(() => {
-    const userId = getUserId();
-    if (userId) {
+    console.log('🔍 useEffect triggered - user object:', user);
+    console.log('🔍 user?.id:', user?.id);
+    console.log('🔍 user?._id:', user?._id);
+    console.log('🔍 user?.user?.id:', user?.user?.id);
+    console.log('🔍 user?.user?._id:', user?.user?._id);
+    
+    const userId = user?.id || user?._id || user?.user?.id || user?.user?._id;
+    
+    // Only load if we have a user ID and haven't loaded yet
+    if (userId && !hasLoaded.current) {
+      hasLoaded.current = true;
       console.log('🔄 Loading requests for user:', userId);
-      loadRequests();
-    } else {
+      
+      // Call loadRequests directly instead of using the function reference
+      const loadRequestsDirect = async () => {
+        setLoading(true);
+        try {
+          console.log('🔍 Loading requests for user ID:', userId);
+          console.log('🔑 Auth token present:', !!localStorage.getItem('token'));
+          
+          console.log('🚀 Making API call to:', `/api/bin-requests/user/${userId}`);
+          
+          // Add timeout to the API call
+          const response = await Promise.race([
+            getBinRequestsByUser(userId),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('API call timeout after 10 seconds')), 10000)
+            )
+          ]);
+          
+          console.log('📦 API Response:', response);
+          console.log('📦 Response type:', typeof response);
+          console.log('📦 Response keys:', Object.keys(response || {}));
+          
+          if (response && response.success) {
+            const requestsData = response.data || [];
+            setRequests(requestsData);
+            console.log('✅ Requests loaded successfully:', requestsData.length, 'requests found');
+            
+            if (requestsData.length === 0) {
+              console.log('ℹ️ No requests found for this user');
+            }
+          } else {
+            const errorMessage = response?.message || 'Failed to load requests';
+            console.error('❌ Error loading requests:', errorMessage);
+            setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+            setRequests([]);
+          }
+        } catch (error) {
+          console.error('💥 Error loading requests:', error);
+          console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            url: error.config?.url
+          });
+          
+          // Show more specific error message
+          let errorMessage = 'Error loading requests. Please check your connection and try again.';
+          if (error.response?.status === 403) {
+            errorMessage = 'Access denied. You are not authorized to view these requests.';
+          } else if (error.response?.status === 404) {
+            errorMessage = 'User not found. Please log in again.';
+          } else if (error.response?.status === 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (!error.response) {
+            errorMessage = 'Network error. Please check if the server is running.';
+          }
+          
+          setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+          setRequests([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadRequestsDirect();
+    } else if (!userId) {
       console.log('⚠️ No user ID found, cannot load requests');
+      console.log('⚠️ Full user object:', JSON.stringify(user, null, 2));
+    } else {
+      console.log('🔄 Skipping load - already loaded or no user ID');
     }
-  }, [user, getUserId, loadRequests]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Auto-populate form with user data when user is available
   useEffect(() => {

@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
                 const parsedUser = JSON.parse(storedUser);
                 console.log('Using stored user data:', parsedUser);
                 setUser(parsedUser);
-                return; // Skip API call if we have stored user data
+                // Don't return here - still make API call to get fresh data
               } catch (e) {
                 console.log('Failed to parse stored user data');
               }

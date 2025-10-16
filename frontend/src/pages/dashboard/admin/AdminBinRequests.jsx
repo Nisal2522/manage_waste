@@ -95,8 +95,10 @@ const AdminBinRequests = () => {
       setError('');
       
       const token = localStorage.getItem('token');
+      console.log('🔑 Token:', token ? 'Present' : 'Missing');
       
       const apiUrl = `http://localhost:5000/api/bin-requests?page=${page}&limit=10`;
+      console.log('🌐 API URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -106,6 +108,9 @@ const AdminBinRequests = () => {
         },
         credentials: 'include'
       });
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', response.headers);
 
       // Check if response is HTML (error page)
       const contentType = response.headers.get('content-type');
@@ -125,12 +130,14 @@ const AdminBinRequests = () => {
       }
 
       const data = await response.json();
+      console.log('📦 Response data:', data);
       
       if (!response.ok) {
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
 
       if (data.success) {
+        console.log('✅ Success! Requests:', data.data?.length || 0);
         setRequests(data.data || []);
         setPagination(data.pagination || {
           current: 1,
@@ -141,7 +148,12 @@ const AdminBinRequests = () => {
         throw new Error(data.message || 'Failed to fetch bin requests');
       }
     } catch (err) {
-      console.error('Error fetching bin requests:', err);
+      console.error('❌ Error fetching bin requests:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      });
       setError(err.message);
       showSnackbar(err.message, 'error');
       
@@ -153,6 +165,7 @@ const AdminBinRequests = () => {
         total: 0
       });
     } finally {
+      console.log('🏁 Loading finished');
       setLoading(false);
     }
   };
