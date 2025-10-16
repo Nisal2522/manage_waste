@@ -29,8 +29,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      console.log('401 Unauthorized - clearing auth data');
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('user');
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -276,6 +281,11 @@ export const getBinRequestsByStatus = async (status) => {
 
 export const getBinsByUser = async (userId) => {
   const response = await api.get(`/bins/user/${userId}`);
+  return response.data;
+};
+
+export const updateBinFillLevel = async (binId, fillLevel) => {
+  const response = await api.patch(`/bins/${binId}/fill-level`, { fillLevel });
   return response.data;
 };
 

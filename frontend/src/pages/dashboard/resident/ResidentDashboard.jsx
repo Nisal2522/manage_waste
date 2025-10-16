@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   MdDashboard,
   MdRecycling,
@@ -28,37 +28,58 @@ const ResidentDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // Fetch user's bin requests
-  useEffect(() => {
-    const fetchBinRequests = async () => {
-      if (!user?.id) return;
+  const fetchBinRequests = useCallback(async () => {
+    // Try different possible user ID properties
+    const userId = user?.id || user?._id || user?.user?.id || user?.user?._id;
+    
+    if (!userId) {
+      console.log('No user ID found. User object:', user);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('Fetching bin requests for user ID:', userId);
+      const response = await getBinRequestsByUser(userId);
+      console.log('API Response:', response);
+      console.log('Response data:', response.data);
+      console.log('Response success:', response.success);
       
-      try {
-        setLoading(true);
-        const response = await getBinRequestsByUser(user.id);
-        setBinRequests(response.data || []);
-        console.log('Fetched bin requests:', response.data);
-      } catch (error) {
-        console.error('Error fetching bin requests:', error);
+      if (response.success && response.data) {
+        setBinRequests(response.data);
+        console.log('Set bin requests:', response.data);
+      } else {
+        console.log('No data in response or request failed');
         setBinRequests([]);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching bin requests:', error);
+      console.error('Error details:', error.response?.data);
+      setBinRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
+  useEffect(() => {
     fetchBinRequests();
-  }, [user?.id]);
+  }, [fetchBinRequests]);
   
   // Calculate stats from real bin requests data
   const totalRequests = binRequests.length;
   const pendingRequests = binRequests.filter(req => req.status === 'pending').length;
   const approvedRequests = binRequests.filter(req => req.status === 'approved').length;
-  const completedRequests = binRequests.filter(req => req.status === 'completed').length;
+
+  // Debug logging
+  console.log('Bin requests array:', binRequests);
+  console.log('Total requests:', totalRequests);
+  console.log('Pending requests:', pendingRequests);
+  console.log('Approved requests:', approvedRequests);
 
   const stats = [
     { title: 'Total Requests', value: totalRequests.toString(), change: '', color: 'bg-blue-500', icon: <MdRequestPage className="text-2xl" /> },
     { title: 'Pending', value: pendingRequests.toString(), change: '', color: 'bg-amber-500', icon: <MdSchedule className="text-2xl" /> },
-    { title: 'Approved', value: approvedRequests.toString(), change: '', color: 'bg-green-500', icon: <MdCheckCircle className="text-2xl" /> },
-    { title: 'Completed', value: completedRequests.toString(), change: '', color: 'bg-emerald-500', icon: <MdRecycling className="text-2xl" /> }
+    { title: 'Approved', value: approvedRequests.toString(), change: '', color: 'bg-green-500', icon: <MdCheckCircle className="text-2xl" /> }
   ];
 
   // Show recent bin requests as upcoming collections
@@ -123,7 +144,7 @@ const ResidentDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {stats.map((stat, index) => (
             <div key={index} className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-300/50 p-6 h-48 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">
@@ -138,7 +159,11 @@ const ResidentDashboard = () => {
               </div>
               <div className="flex-1 flex flex-col justify-center">
                 <div className="text-3xl font-bold text-gray-800 mb-1">
-                  {stat.value}
+                  {loading ? (
+                    <div className="animate-pulse bg-gray-300 h-8 w-12 rounded"></div>
+                  ) : (
+                    stat.value
+                  )}
                 </div>
                 <div className="text-sm text-gray-600">
                   {stat.title}
@@ -158,22 +183,38 @@ const ResidentDashboard = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {upcomingCollections.map((collection, index) => (
-                <div key={collection.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <MdRecycling className="text-green-600 text-xl" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-800">{collection.type} Waste</h4>
-                      <p className="text-sm text-gray-600">{collection.date} at {collection.time}</p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(collection.status)}`}>
-                      {collection.status}
-                    </span>
+              {loading ? (
+                <div className="p-4 text-center">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded"></div>
                   </div>
                 </div>
-              ))}
+              ) : upcomingCollections.length > 0 ? (
+                upcomingCollections.map((collection, index) => (
+                  <div key={collection.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <MdRecycling className="text-green-600 text-xl" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800">{collection.type} Waste</h4>
+                        <p className="text-sm text-gray-600">{collection.date} at {collection.time}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(collection.status)}`}>
+                        {collection.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  <MdRecycling className="text-4xl mx-auto mb-2 text-gray-300" />
+                  <p>No upcoming collections</p>
+                  <p className="text-sm">Create a bin request to get started</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -186,19 +227,35 @@ const ResidentDashboard = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {recentActivities.map((activity, index) => (
-                <div key={activity.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-transparent rounded-full flex items-center justify-center">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-gray-800 font-medium">{activity.message}</p>
-                      <p className="text-sm text-gray-600">{activity.time}</p>
-                    </div>
+              {loading ? (
+                <div className="p-4 text-center">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded"></div>
                   </div>
                 </div>
-              ))}
+              ) : recentActivities.length > 0 ? (
+                recentActivities.map((activity, index) => (
+                  <div key={activity.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-transparent rounded-full flex items-center justify-center">
+                        {getActivityIcon(activity.type)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-gray-800 font-medium">{activity.message}</p>
+                        <p className="text-sm text-gray-600">{activity.time}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  <MdInfo className="text-4xl mx-auto mb-2 text-gray-300" />
+                  <p>No recent activities</p>
+                  <p className="text-sm">Your activities will appear here</p>
+                </div>
+              )}
             </div>
           </div>
 

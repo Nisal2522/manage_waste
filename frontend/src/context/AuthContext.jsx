@@ -21,64 +21,92 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('token');
         if (token) {
           // Check if token is expired
-          const tokenData = JSON.parse(atob(token.split('.')[1]));
-          const currentTime = Date.now() / 1000;
-          
-          if (tokenData.exp && tokenData.exp < currentTime) {
-            // Token is expired, remove it and clear user
-            localStorage.removeItem('token');
-            setUser(null);
-            console.log('Token expired, user logged out');
-          } else {
-            // Try to get user from localStorage first (fallback)
-            const storedUser = localStorage.getItem('user');
-            if (storedUser) {
-              try {
-                const parsedUser = JSON.parse(storedUser);
-                console.log('Using stored user data:', parsedUser);
-                setUser(parsedUser);
-                // Don't return here - still make API call to get fresh data
-              } catch (e) {
-                console.log('Failed to parse stored user data');
-              }
-            }
-            // Token is valid, get user data with timeout
-            try {
-              console.log('Attempting to get current user with token...');
-              const response = await Promise.race([
-                getCurrentUser(),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Request timeout')), 10000)
-                )
-              ]);
-              console.log('getCurrentUser response:', response); // Debug log
-              
-              // Handle API response structure: { success: true, data: { user: {...} } }
-              const userData = response.data?.user || response.user || response;
-              console.log('Extracted user from getCurrentUser:', userData); // Debug log
-              setUser(userData);
-            } catch (timeoutError) {
-              console.log('Auth request timeout or error:', timeoutError.message);
-              // Don't clear token immediately, just set user to null temporarily
+          try {
+            const tokenData = JSON.parse(atob(token.split('.')[1]));
+            const currentTime = Date.now() / 1000;
+            
+            if (tokenData.exp && tokenData.exp < currentTime) {
+              // Token is expired, remove it and clear user
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
               setUser(null);
+              console.log('Token expired, user logged out');
+              setLoading(false);
+              return;
+            }
+          } catch (tokenError) {
+            console.log('Invalid token format, clearing auth data');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+
+          // Try to get user from localStorage first (immediate display)
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              console.log('Using stored user data for immediate display:', parsedUser);
+              setUser(parsedUser);
+              setLoading(false); // Allow user to see the app immediately
+            } catch (e) {
+              console.log('Failed to parse stored user data');
             }
           }
+
+          // Try to get fresh user data from API (in background)
+          try {
+            console.log('Attempting to get current user with token...');
+            const response = await Promise.race([
+              getCurrentUser(),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 5000)
+              )
+            ]);
+            console.log('getCurrentUser response:', response);
+            
+            // Handle API response structure: { success: true, data: { user: {...} } }
+            const userData = response.data?.user || response.user || response;
+            console.log('Extracted user from getCurrentUser:', userData);
+            
+            if (userData && userData._id) {
+              setUser(userData);
+              localStorage.setItem('user', JSON.stringify(userData));
+              console.log('Updated user data from API');
+            }
+          } catch (apiError) {
+            console.log('API call failed, but keeping stored user data:', apiError.message);
+            // Don't clear user data if API fails - keep the stored data
+            // This prevents logout on network issues
+          }
+        } else {
+          // No token found
+          setUser(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         
-        // Only clear token if it's an authentication error, not a network error
+        // Only clear token if it's an authentication error
         if (error.response?.status === 401 || error.response?.status === 403) {
           localStorage.removeItem('token');
-          setUser(null);
-        } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-          // Network error - keep token but set user to null temporarily
-          console.log('Network error - backend server may not be running');
+          localStorage.removeItem('user');
           setUser(null);
         } else {
-          // Other errors - clear token
-          localStorage.removeItem('token');
-          setUser(null);
+          // For other errors, keep stored data if available
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              setUser(parsedUser);
+              console.log('Using stored user data after error');
+            } catch (e) {
+              setUser(null);
+            }
+          } else {
+            setUser(null);
+          }
         }
       } finally {
         setLoading(false);

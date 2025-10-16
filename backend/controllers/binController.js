@@ -298,6 +298,67 @@ export const updateBinStatus = async (req, res) => {
   }
 };
 
+// @desc    Update bin fill level
+// @route   PATCH /api/bins/:id/fill-level
+// @access  Private
+export const updateBinFillLevel = async (req, res) => {
+  try {
+    const { fillLevel } = req.body;
+    
+    // Validate fill level
+    if (fillLevel === undefined || fillLevel === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Fill level is required'
+      });
+    }
+
+    if (fillLevel < 0 || fillLevel > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Fill level must be between 0 and 100'
+      });
+    }
+
+    const bin = await Bin.findById(req.params.id);
+    
+    if (!bin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bin not found'
+      });
+    }
+
+    // Check if user can update this bin
+    if (req.user.role !== 'admin' && req.user.role !== 'staff' && bin.userId.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this bin'
+      });
+    }
+
+    console.log(`📊 Updating fill level for bin ${bin.binId} from ${bin.currentFill}% to ${fillLevel}%`);
+
+    bin.currentFill = fillLevel;
+    const updatedBin = await bin.save();
+
+    console.log(`✅ Fill level updated successfully for bin ${bin.binId}`);
+
+    res.json({
+      success: true,
+      message: 'Bin fill level updated successfully',
+      data: updatedBin
+    });
+  } catch (error) {
+    console.error('❌ Error updating bin fill level:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating bin fill level',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Delete bin
 // @route   DELETE /api/bins/:id
 // @access  Private

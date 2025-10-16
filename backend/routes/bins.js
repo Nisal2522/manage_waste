@@ -6,7 +6,8 @@ import {
   updateBin,
   deleteBin,
   getBinsByUser,
-  updateBinStatus
+  updateBinStatus,
+  updateBinFillLevel
 } from '../controllers/binController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -30,25 +31,30 @@ router.get('/', getBins);
 // @access  Private
 router.get('/user/:userId', getBinsByUser);
 
-// @route   GET /api/bins/:id
-// @desc    Get single bin by ID
-// @access  Private
-router.get('/:id', getBinById);
-
 // @route   POST /api/bins
 // @desc    Create new bin
 // @access  Private
 router.post('/', createBin);
 
-// @route   PUT /api/bins/:id
-// @desc    Update bin
-// @access  Private
-router.put('/:id', updateBin);
-
 // @route   PATCH /api/bins/:id/status
 // @desc    Update bin status
 // @access  Private
 router.patch('/:id/status', updateBinStatus);
+
+// @route   PATCH /api/bins/:id/fill-level
+// @desc    Update bin fill level
+// @access  Private
+router.patch('/:id/fill-level', updateBinFillLevel);
+
+// @route   GET /api/bins/:id
+// @desc    Get single bin by ID
+// @access  Private
+router.get('/:id', getBinById);
+
+// @route   PUT /api/bins/:id
+// @desc    Update bin
+// @access  Private
+router.put('/:id', updateBin);
 
 // @route   DELETE /api/bins/:id
 // @desc    Delete bin
