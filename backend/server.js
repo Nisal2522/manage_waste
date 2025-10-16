@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 // Import routes
 import authRoutes from './routes/auth.js';
 import binRequestRoutes from './routes/binRequests.js';
+import binRoutes from './routes/bins.js';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ mongoose.connect(process.env.MONGODB_URI)
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/bin-requests', binRequestRoutes);
+app.use('/api/bins', binRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

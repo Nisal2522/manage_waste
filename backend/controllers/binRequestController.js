@@ -6,7 +6,7 @@ import User from '../models/User.js';
 // @access  Private
 export const createBinRequest = async (req, res) => {
   try {
-    console.log('📝 Creating bin request for user:', req.user.id);
+    console.log('📝 Creating bin request for user:', req.user.userId);
     console.log('Request body:', req.body);
     
     const { selectedBins, specialInstructions, contactPhone, contactEmail, address } = req.body;
@@ -28,7 +28,7 @@ export const createBinRequest = async (req, res) => {
 
     // Create the bin request
     const binRequest = new BinRequest({
-      userId: req.user.id, // Use req.user.id consistently
+      userId: req.user.userId, // Use req.user.userId consistently
       selectedBins,
       specialInstructions: specialInstructions || '',
       contactPhone,
@@ -64,7 +64,7 @@ export const createBinRequest = async (req, res) => {
 // @access  Private
 export const getBinRequests = async (req, res) => {
   try {
-    console.log('📋 Getting bin requests for user:', req.user.id, 'Role:', req.user.role);
+    console.log('📋 Getting bin requests for user:', req.user.userId, 'Role:', req.user.role);
     
     const { status, page = 1, limit = 10 } = req.query;
     
@@ -72,7 +72,7 @@ export const getBinRequests = async (req, res) => {
     
     // If user is not admin, only show their own requests
     if (req.user.role !== 'admin' && req.user.role !== 'staff') {
-      query.userId = req.user.id;
+      query.userId = req.user.userId;
     }
     
     // Filter by status if provided
@@ -128,7 +128,7 @@ export const getBinRequestById = async (req, res) => {
     }
 
     // Check if user can access this request
-    if (req.user.role !== 'admin' && req.user.role !== 'staff' && request.userId._id.toString() !== req.user.id) {
+    if (req.user.role !== 'admin' && req.user.role !== 'staff' && request.userId._id.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this request'
@@ -156,12 +156,13 @@ export const getBinRequestById = async (req, res) => {
 // @access  Private
 export const getBinRequestsByUser = async (req, res) => {
   try {
+    console.log('🎯 getBinRequestsByUser controller called');
     const { userId } = req.params;
     console.log('👤 Getting bin requests for user ID:', userId);
-    console.log('Authenticated user ID:', req.user.id, 'Role:', req.user.role);
+    console.log('Authenticated user ID:', req.user.userId, 'Role:', req.user.role);
     
     // Check if user can access these requests
-    if (req.user.role !== 'admin' && req.user.role !== 'staff' && req.user.id !== userId) {
+    if (req.user.role !== 'admin' && req.user.role !== 'staff' && req.user.userId !== userId) {
       console.log('🚫 Access denied: User cannot access these requests');
       return res.status(403).json({
         success: false,
@@ -209,7 +210,7 @@ export const updateBinRequest = async (req, res) => {
     }
 
     // Check if user can update this request
-    if (req.user.role !== 'admin' && req.user.role !== 'staff' && request.userId.toString() !== req.user.id) {
+    if (req.user.role !== 'admin' && req.user.role !== 'staff' && request.userId.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this request'
@@ -269,7 +270,7 @@ export const deleteBinRequest = async (req, res) => {
     }
 
     // Check if user can delete this request
-    if (req.user.role !== 'admin' && req.user.role !== 'staff' && request.userId.toString() !== req.user.id) {
+    if (req.user.role !== 'admin' && req.user.role !== 'staff' && request.userId.toString() !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this request'

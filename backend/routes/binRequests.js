@@ -13,8 +13,13 @@ import { authenticateToken } from '../middleware/authMiddleware.js'; // Fixed mi
 
 const router = express.Router();
 
+// Test route without auth to verify routing works
+router.get('/test', (req, res) => {
+  res.json({ message: 'Bin requests route is working', timestamp: new Date().toISOString() });
+});
+
 // Apply auth middleware to all routes
-router.use(authenticateToken);
+router.use(authenticateToken());
 
 // @route   GET /api/bin-requests
 // @desc    Get all bin requests (with filtering)

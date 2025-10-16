@@ -7,11 +7,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 export const authenticateToken = (allowedRoles = null) => {
   return async (req, res, next) => {
   try {
+    console.log('🔐 Auth middleware called for:', req.method, req.originalUrl);
+    
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
+    console.log('🔑 Token present:', !!token);
+
     if (!token) {
+      console.log('❌ No token provided');
       return res.status(401).json({
         success: false,
         message: 'Access token required'
@@ -19,16 +24,21 @@ export const authenticateToken = (allowedRoles = null) => {
     }
 
     // Verify token
+    console.log('🔍 Verifying token...');
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('✅ Token verified, user ID:', decoded.userId);
     
     // Check if user still exists and is active
+    console.log('🔍 Looking up user in database...');
     const user = await User.findById(decoded.userId);
     if (!user) {
+      console.log('❌ User not found in database');
       return res.status(401).json({
         success: false,
         message: 'User not found'
       });
     }
+    console.log('✅ User found:', user.email, 'Active:', user.isActive);
 
     if (!user.isActive) {
       return res.status(401).json({
@@ -44,12 +54,15 @@ export const authenticateToken = (allowedRoles = null) => {
       role: decoded.role
     };
 
+    console.log('👤 User info added to request:', req.user);
+
     // Check role restrictions if specified
     if (allowedRoles) {
       const userRole = req.user.role;
       const allowedRolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
       
       if (!allowedRolesArray.includes(userRole)) {
+        console.log('❌ Role check failed:', userRole, 'not in', allowedRolesArray);
         return res.status(403).json({
           success: false,
           message: 'Insufficient permissions'
@@ -57,6 +70,7 @@ export const authenticateToken = (allowedRoles = null) => {
       }
     }
 
+    console.log('✅ Auth middleware completed, calling next()');
     next();
   } catch (error) {
     console.error('Token verification error:', error);
