@@ -500,28 +500,29 @@ const AdminAnalyticsDashboard = () => {
       <div className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-br from-emerald-200/20 to-green-200/20 rounded-full blur-xl"></div>
       <div className="absolute bottom-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-200/20 to-emerald-200/20 rounded-full blur-xl"></div>
 
-      <div className="relative z-10 p-8 max-w-7xl mx-auto">
-        {/* Enhanced Header */}
-        <div className="mb-10 w-full">
-          <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-8 shadow-2xl">
-            <div className="flex justify-between items-center flex-wrap gap-6">
-              <div>
-                <h1 className="text-5xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent mb-3 tracking-tight">
+      <div className="relative z-10 p-3 md:p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Enhanced Header - Mobile Responsive */}
+        <div className="mb-6 md:mb-8 lg:mb-10 w-full">
+          <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-2xl">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-6">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent mb-2 md:mb-3 tracking-tight">
                   Analytics Dashboard
                 </h1>
-                <p className="text-emerald-600 text-xl font-medium">
+                <p className="text-emerald-600 text-sm sm:text-base md:text-lg lg:text-xl font-medium">
                   Comprehensive insights for waste management operations
                 </p>
               </div>
               
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3 lg:gap-4 w-full lg:w-auto">
                 <button 
                   type="button"
                   onClick={() => navigate('/admin/bins-analysis')}
-                  className="group flex items-center space-x-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
+                  className="group flex items-center justify-center space-x-2 md:space-x-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 md:px-6 lg:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5 text-sm md:text-base"
                 >
-                  <MdStorage className="text-xl group-hover:animate-pulse" />
-                  <span>View Overview</span>
+                  <MdStorage className="text-lg md:text-xl group-hover:animate-pulse" />
+                  <span className="hidden sm:inline">View Overview</span>
+                  <span className="sm:hidden">Overview</span>
                 </button>
                 <button 
                   type="button"
@@ -533,43 +534,45 @@ const AdminAnalyticsDashboard = () => {
                     fetchDistrictAnalysis();
                   }}
                   disabled={loading}
-                  className="group flex items-center space-x-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
+                  className="group flex items-center justify-center space-x-2 md:space-x-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 md:px-6 lg:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5 text-sm md:text-base"
                 >
-                  <MdRefresh className={`text-xl ${loading ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
-                  <span>{loading ? 'Refreshing...' : 'Refresh Data'}</span>
+                  <MdRefresh className={`text-lg md:text-xl ${loading ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
+                  <span className="hidden sm:inline">{loading ? 'Refreshing...' : 'Refresh Data'}</span>
+                  <span className="sm:hidden">{loading ? '...' : 'Refresh'}</span>
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleExportReport('PDF')}
-                  className="group flex items-center space-x-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-4 rounded-2xl hover:from-emerald-700 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
+                  className="group flex items-center justify-center space-x-2 md:space-x-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-4 md:px-6 lg:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl hover:from-emerald-700 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5 text-sm md:text-base"
                 >
-                  <MdFileDownload className="text-xl group-hover:animate-pulse" />
-                  <span>Export Report</span>
+                  <MdFileDownload className="text-lg md:text-xl group-hover:animate-pulse" />
+                  <span className="hidden sm:inline">Export Report</span>
+                  <span className="sm:hidden">Export</span>
                 </button>
                 <button 
                   type="button" 
-                  className="group relative bg-white/90 backdrop-blur-sm border-2 border-emerald-300 p-4 rounded-2xl hover:bg-emerald-50 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
+                  className="group relative bg-white/90 backdrop-blur-sm border-2 border-emerald-300 p-3 md:p-4 rounded-xl md:rounded-2xl hover:bg-emerald-50 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
                 >
-                  <MdSettings className="text-emerald-600 text-xl group-hover:animate-spin" />
+                  <MdSettings className="text-emerald-600 text-lg md:text-xl group-hover:animate-spin" />
                 </button>
               </div>
             </div>
           </div>
         </div>
           
-        {/* Enhanced Content */}
+        {/* Enhanced Content - Mobile Responsive */}
         {loading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-12 shadow-2xl">
-              <div className="flex items-center space-x-6">
-                <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-                <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">Loading Analytics Data</h3>
-                  <p className="text-emerald-600 text-lg">Fetching comprehensive insights...</p>
+          <div className="flex items-center justify-center py-8 md:py-12 lg:py-16">
+            <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-2xl md:rounded-3xl p-6 md:p-8 lg:p-12 shadow-2xl">
+              <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 md:space-x-6">
+                <div className="w-10 h-10 md:w-12 md:h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+                <div className="text-center sm:text-left">
+                  <h3 className="text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">Loading Analytics Data</h3>
+                  <p className="text-emerald-600 text-sm md:text-base lg:text-lg">Fetching comprehensive insights...</p>
                 </div>
               </div>
-              <div className="mt-6 w-64 h-2 bg-emerald-200 rounded-full">
-                <div className="w-48 h-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full animate-pulse"></div>
+              <div className="mt-4 md:mt-6 w-48 md:w-64 h-1.5 md:h-2 bg-emerald-200 rounded-full mx-auto sm:mx-0">
+                <div className="w-36 md:w-48 h-1.5 md:h-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full animate-pulse"></div>
               </div>
             </div>
           </div>
@@ -582,29 +585,29 @@ const AdminAnalyticsDashboard = () => {
         )}
         
         {!loading && !analyticsData.operational && (
-          <div className="flex items-center justify-center py-16">
-            <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-12 shadow-2xl text-center">
-              <div className="text-emerald-500 text-6xl mb-6">📊</div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent mb-4">No Data Available</h3>
-              <p className="text-emerald-600 text-lg">Data will be loaded when you refresh or select a report type</p>
-              <div className="mt-6 w-48 h-2 bg-emerald-200 rounded-full mx-auto">
-                <div className="w-24 h-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"></div>
+          <div className="flex items-center justify-center py-8 md:py-12 lg:py-16">
+            <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-2xl md:rounded-3xl p-6 md:p-8 lg:p-12 shadow-2xl text-center">
+              <div className="text-emerald-500 text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6">📊</div>
+              <h3 className="text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent mb-3 md:mb-4">No Data Available</h3>
+              <p className="text-emerald-600 text-sm md:text-base lg:text-lg">Data will be loaded when you refresh or select a report type</p>
+              <div className="mt-4 md:mt-6 w-36 md:w-48 h-1.5 md:h-2 bg-emerald-200 rounded-full mx-auto">
+                <div className="w-18 md:w-24 h-1.5 md:h-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"></div>
               </div>
             </div>
           </div>
         )}
 
 
-        {/* Enhanced Simulation Mode Indicator */}
+        {/* Enhanced Simulation Mode Indicator - Mobile Responsive */}
         {simulationMode && (
-          <div className="bg-gradient-to-r from-emerald-50/80 to-green-50/80 backdrop-blur-sm border border-emerald-300/50 rounded-3xl p-6 mb-8 shadow-2xl">
-            <div className="flex items-center space-x-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <MdScience className="text-white text-3xl" />
+          <div className="bg-gradient-to-r from-emerald-50/80 to-green-50/80 backdrop-blur-sm border border-emerald-300/50 rounded-2xl md:rounded-3xl p-4 md:p-6 mb-6 md:mb-8 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 md:space-x-6">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg">
+                <MdScience className="text-white text-xl md:text-3xl" />
               </div>
-              <div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">What-if Simulation Active</h3>
-                <p className="text-lg text-emerald-700 font-medium">You are viewing projected metrics under modified pricing policies.</p>
+              <div className="text-center sm:text-left">
+                <h3 className="text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">What-if Simulation Active</h3>
+                <p className="text-sm md:text-base lg:text-lg text-emerald-700 font-medium">You are viewing projected metrics under modified pricing policies.</p>
               </div>
             </div>
           </div>

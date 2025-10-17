@@ -253,7 +253,7 @@ const UserAnalytics = () => {
   }
 
   return (
-    <div className="flex-1 p-6 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+    <div className="flex-1 p-3 md:p-6 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-0 left-0 w-full h-full" style={{
@@ -262,45 +262,46 @@ const UserAnalytics = () => {
       </div>
       
       <div className="relative z-10 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+        {/* Header - Mobile Responsive */}
+        <div className="mb-6 md:mb-8">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-2xl relative overflow-hidden">
             {/* Gradient Overlay */}
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500"></div>
+            <div className="absolute top-0 left-0 w-full h-1.5 md:h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500"></div>
             
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-6">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 md:mb-6 gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-6 w-full lg:w-auto">
                 <button
                   onClick={handleBackToUsers}
-                  className="group flex items-center px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border border-gray-300 text-gray-700 rounded-2xl transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                  className="group flex items-center px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border border-gray-300 text-gray-700 rounded-xl md:rounded-2xl transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-sm md:text-base"
                   title="Back to User Management"
                 >
-                  <MdArrowBack className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-                  <span className="font-semibold">Back to Users</span>
+                  <MdArrowBack className="w-4 h-4 md:w-5 md:h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+                  <span className="font-semibold hidden sm:inline">Back to Users</span>
+                  <span className="font-semibold sm:hidden">Back</span>
                 </button>
                 
-                <div className="flex items-center space-x-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-6 w-full lg:w-auto">
                   <div className="relative">
-                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-500 rounded-xl md:rounded-2xl flex items-center justify-center text-white font-bold text-lg md:text-2xl shadow-xl">
                       {getInitials(selectedUser.name)}
                     </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <div className="absolute -top-1 md:-top-2 -right-1 md:-right-2 w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full"></div>
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent truncate">
                       {selectedUser.name}
                     </h1>
-                    <p className="text-xl text-gray-600 font-medium">{selectedUser.email}</p>
-                    <div className="flex items-center space-x-4">
-                      <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold shadow-lg ${getRoleColor(selectedUser.role).bg} ${getRoleColor(selectedUser.role).text}`}>
-                        <span className="mr-2">{getRoleColor(selectedUser.role).icon}</span>
+                    <p className="text-sm md:text-base lg:text-xl text-gray-600 font-medium truncate">{selectedUser.email}</p>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 md:space-x-4">
+                      <span className={`inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold shadow-lg ${getRoleColor(selectedUser.role).bg} ${getRoleColor(selectedUser.role).text}`}>
+                        <span className="mr-1.5 md:mr-2">{getRoleColor(selectedUser.role).icon}</span>
                         {getRoleColor(selectedUser.role).label}
                       </span>
-                      <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold shadow-lg ${getStatusColor(selectedUser.isActive).bg} ${getStatusColor(selectedUser.isActive).text}`}>
-                        <span className="mr-2">{getStatusColor(selectedUser.isActive).icon}</span>
+                      <span className={`inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold shadow-lg ${getStatusColor(selectedUser.isActive).bg} ${getStatusColor(selectedUser.isActive).text}`}>
+                        <span className="mr-1.5 md:mr-2">{getStatusColor(selectedUser.isActive).icon}</span>
                         {getStatusColor(selectedUser.isActive).label}
                       </span>
                     </div>
@@ -310,20 +311,21 @@ const UserAnalytics = () => {
               
               <button
                 onClick={fetchUserData}
-                className="group flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-2xl transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-2xl"
+                className="group flex items-center px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl md:rounded-2xl transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-2xl text-sm md:text-base"
                 title="Refresh Data"
               >
-                <MdRefresh className="w-5 h-5 mr-2 group-hover:rotate-180 transition-transform duration-500" />
-                <span className="font-semibold">Refresh Data</span>
+                <MdRefresh className="w-4 h-4 md:w-5 md:h-5 mr-2 group-hover:rotate-180 transition-transform duration-500" />
+                <span className="font-semibold hidden sm:inline">Refresh Data</span>
+                <span className="font-semibold sm:hidden">Refresh</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-3 shadow-2xl">
-            <div className="flex space-x-3">
+        {/* Tab Navigation - Mobile Responsive */}
+        <div className="mb-6 md:mb-8">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl md:rounded-3xl p-2 md:p-3 shadow-2xl">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 md:space-x-3">
               {[
                 { id: 'overview', label: 'Overview', icon: <MdBarChart />, color: 'from-blue-500 to-cyan-500' },
                 { id: 'bins', label: 'Bins', icon: <MdRecycling />, color: 'from-green-500 to-emerald-500' },
@@ -334,18 +336,19 @@ const UserAnalytics = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`group flex items-center space-x-3 px-8 py-4 rounded-2xl transition-all duration-300 font-semibold ${
+                  className={`group flex items-center justify-center sm:justify-start space-x-2 md:space-x-3 px-4 md:px-6 lg:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl transition-all duration-300 font-semibold text-sm md:text-base ${
                     activeTab === tab.id
                       ? `bg-gradient-to-r ${tab.color} text-white shadow-xl scale-105`
                       : 'text-gray-600 hover:bg-gray-100 hover:scale-105 hover:shadow-lg'
                   }`}
                 >
-                  <span className={`text-xl transition-transform duration-300 ${activeTab === tab.id ? 'scale-110' : 'group-hover:scale-110'}`}>
+                  <span className={`text-lg md:text-xl transition-transform duration-300 ${activeTab === tab.id ? 'scale-110' : 'group-hover:scale-110'}`}>
                     {tab.icon}
                   </span>
-                  <span className="text-lg">{tab.label}</span>
+                  <span className="hidden sm:inline text-base md:text-lg">{tab.label}</span>
+                  <span className="sm:hidden text-xs">{tab.label}</span>
                   {activeTab === tab.id && (
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-white rounded-full animate-pulse"></div>
                   )}
                 </button>
               ))}

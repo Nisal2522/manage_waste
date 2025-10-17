@@ -302,47 +302,50 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="flex-1 p-6 min-h-screen bg-white relative overflow-hidden">
+    <div className="flex-1 p-3 md:p-6 min-h-screen bg-white relative overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="bg-white border-4 border-blue-500 rounded-3xl p-8 shadow-xl" style={{borderImage: 'linear-gradient(45deg, #3b82f6, #8b5cf6) 1'}}>
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-4xl font-bold text-black flex items-center">
-                <MdDashboard className="text-blue-600 mr-3" size={40} />
-              Admin Dashboard
-            </h1>
-          <div className="flex gap-3">
+        {/* Header - Mobile Responsive */}
+        <div className="mb-6 md:mb-8">
+          <div className="bg-white border-4 border-blue-500 rounded-2xl md:rounded-3xl p-4 md:p-6 lg:p-8 shadow-xl" style={{borderImage: 'linear-gradient(45deg, #3b82f6, #8b5cf6) 1'}}>
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 gap-4">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black flex items-center">
+                <MdDashboard className="text-blue-600 mr-2 md:mr-3" size={32} />
+                <span className="hidden sm:inline">Admin Dashboard</span>
+                <span className="sm:hidden">Admin</span>
+              </h1>
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3 w-full lg:w-auto">
                 <button 
                   onClick={fetchDashboardStats}
                   disabled={statsLoading}
-                  className="flex items-center px-4 py-2 bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 text-blue-600 rounded-xl hover:bg-blue-500/30 hover:border-blue-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+                  className="flex items-center justify-center px-3 md:px-4 py-2 bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 text-blue-600 rounded-lg md:rounded-xl hover:bg-blue-500/30 hover:border-blue-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 text-sm md:text-base"
                   title="Refresh Dashboard Stats"
                 >
                   <MdRefresh className={`w-4 h-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
-                  {statsLoading ? 'Refreshing...' : 'Refresh Stats'}
-            </button>
-                <button className="flex items-center px-4 py-2 bg-gray-500/20 backdrop-blur-sm border border-gray-500/30 text-gray-600 rounded-xl hover:bg-gray-500/30 hover:border-gray-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-gray-500/25">
+                  <span className="hidden sm:inline">{statsLoading ? 'Refreshing...' : 'Refresh Stats'}</span>
+                  <span className="sm:hidden">{statsLoading ? '...' : 'Refresh'}</span>
+                </button>
+                <button className="flex items-center justify-center px-3 md:px-4 py-2 bg-gray-500/20 backdrop-blur-sm border border-gray-500/30 text-gray-600 rounded-lg md:rounded-xl hover:bg-gray-500/30 hover:border-gray-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-gray-500/25 text-sm md:text-base">
                   <MdDownload className="w-4 h-4 mr-2" />
-                  Export Report
-            </button>
-                <button className="relative px-4 py-2 bg-red-500/20 backdrop-blur-sm border border-red-500/30 text-red-600 rounded-xl hover:bg-red-500/30 hover:border-red-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25">
+                  <span className="hidden sm:inline">Export Report</span>
+                  <span className="sm:hidden">Export</span>
+                </button>
+                <button className="relative px-3 md:px-4 py-2 bg-red-500/20 backdrop-blur-sm border border-red-500/30 text-red-600 rounded-lg md:rounded-xl hover:bg-red-500/30 hover:border-red-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25">
                   <MdNotifications className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                4
-              </span>
-            </button>
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 md:h-5 md:w-5 flex items-center justify-center font-bold text-xs">
+                    4
+                  </span>
+                </button>
               </div>
             </div>
-            <p className="text-lg text-gray-600 font-light tracking-wide">
+            <p className="text-sm md:text-base lg:text-lg text-gray-600 font-light tracking-wide">
               Comprehensive system overview and management controls for waste management operations
             </p>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Stats Cards - Mobile Responsive */}
+        <div className="mb-6 md:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {stats.map((stat, index) => {
               const colors = [
                 { border: 'border-blue-500', gradient: 'from-blue-400 to-cyan-400', bg: 'from-blue-300 to-cyan-300' },
@@ -353,25 +356,25 @@ const AdminDashboard = () => {
               const colorScheme = colors[index] || colors[0];
               
               return (
-                <div key={index} className={`bg-white border-4 ${colorScheme.border} rounded-3xl p-6 shadow-xl relative overflow-hidden hover:scale-105 transition-all duration-300`}>
-                  <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${colorScheme.bg} rounded-full transform translate-x-8 -translate-y-8`} />
+                <div key={index} className={`bg-white border-4 ${colorScheme.border} rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl relative overflow-hidden hover:scale-105 transition-all duration-300`}>
+                  <div className={`absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-gradient-to-br ${colorScheme.bg} rounded-full transform translate-x-4 md:translate-x-8 -translate-y-4 md:-translate-y-8`} />
                   
                   <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-lg font-medium text-gray-800">{stat.title}</h3>
-                      <div className={`bg-gradient-to-r ${colorScheme.gradient} rounded-xl px-3 py-1 shadow-lg`}>
+                    <div className="flex justify-between items-start mb-3 md:mb-4">
+                      <h3 className="text-sm md:text-base lg:text-lg font-medium text-gray-800">{stat.title}</h3>
+                      <div className={`bg-gradient-to-r ${colorScheme.gradient} rounded-lg md:rounded-xl px-2 md:px-3 py-1 shadow-lg`}>
                         <span className="text-white font-bold text-xs">{stat.change}</span>
                 </div>
                 </div>
                     
                     <div className="flex justify-between items-end">
-                      <div className="text-4xl font-bold text-black">{stat.value}</div>
-                      <div className={`w-12 h-12 bg-gradient-to-br ${colorScheme.gradient} rounded-xl flex items-center justify-center shadow-lg`}>
-                      {stat.icon}
+                      <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-black">{stat.value}</div>
+                      <div className={`w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br ${colorScheme.gradient} rounded-lg md:rounded-xl flex items-center justify-center shadow-lg`}>
+                      <span className="text-lg md:text-xl">{stat.icon}</span>
                   </div>
                 </div>
                     
-                    <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${colorScheme.gradient} rounded-b-3xl`} />
+                    <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${colorScheme.gradient} rounded-b-2xl md:rounded-b-3xl`} />
               </div>
             </div>
               );
@@ -379,10 +382,10 @@ const AdminDashboard = () => {
             </div>
         </div>
 
-        {/* Main Content Area with Tabs */}
-        <div className="bg-white border-4 border-blue-500 rounded-3xl shadow-xl mb-8 overflow-hidden">
+        {/* Main Content Area with Tabs - Mobile Responsive */}
+        <div className="bg-white border-4 border-blue-500 rounded-2xl md:rounded-3xl shadow-xl mb-6 md:mb-8 overflow-hidden">
           <div className="border-b-4 border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
-            <div className="flex">
+            <div className="flex flex-col sm:flex-row">
               {[
                 { label: 'User Management', icon: <MdPeopleAlt className="text-lg" /> },
                 { label: 'Waste Collection', icon: <MdRecycling className="text-lg" /> }
@@ -390,7 +393,7 @@ const AdminDashboard = () => {
                 <button
                   key={index}
                   onClick={() => setTabValue(index)}
-                  className={`flex items-center space-x-3 px-8 py-6 text-sm font-bold transition-all duration-300 border-b-4 ${
+                  className={`flex items-center space-x-2 md:space-x-3 px-4 md:px-6 lg:px-8 py-4 md:py-6 text-xs md:text-sm font-bold transition-all duration-300 border-b-4 ${
                     tabValue === index
                       ? 'text-green-700 border-green-500 bg-white shadow-lg transform scale-105'
                       : 'text-gray-600 border-transparent hover:text-green-700 hover:bg-white/50 hover:scale-105'
@@ -399,14 +402,15 @@ const AdminDashboard = () => {
                   <span className={tabValue === index ? 'text-green-600' : 'text-gray-500'}>
                   {tab.icon}
                   </span>
-                  <span>{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
                 </button>
               ))}
             </div>
           </div>
           
-          {/* Tab Content */}
-          <div className="p-8">
+          {/* Tab Content - Mobile Responsive */}
+          <div className="p-4 md:p-6 lg:p-8">
             
             {/* User Management Tab */}
             {tabValue === 0 && (
