@@ -10,11 +10,13 @@ import {
   MdRecycling,
   MdSchedule,
   MdWarning,
-  MdInfo
+  MdInfo,
+  MdQrCode
 } from 'react-icons/md';
 import { FaEye } from 'react-icons/fa';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { getBinRequestsByUser, createBin, getBinsByUser, updateBinFillLevel, deleteBin } from '../../../utils/api.jsx';
+import QRGenerator from '../../../components/common/QRGenerator';
 
 const MyBins = () => {
   const { user } = useAuth();
@@ -22,8 +24,10 @@ const MyBins = () => {
   const [openFillLevelModal, setOpenFillLevelModal] = useState(false);
   const [openBulkFillLevelModal, setOpenBulkFillLevelModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openQRModal, setOpenQRModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedBin, setSelectedBin] = useState(null);
+  const [qrBinData, setQrBinData] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [requests, setRequests] = useState([]);
   const [bins, setBins] = useState([]);
@@ -190,6 +194,17 @@ const MyBins = () => {
     setOpenDeleteModal(false);
     setSelectedBin(null);
   };
+
+  const handleOpenQRModal = (bin) => {
+    setQrBinData(bin);
+    setOpenQRModal(true);
+  };
+
+  const handleCloseQRModal = () => {
+    setOpenQRModal(false);
+    setQrBinData(null);
+  };
+
 
   const handleUpdateFillLevel = async () => {
     try {
@@ -438,6 +453,13 @@ const MyBins = () => {
         }
         
         handleCloseCreateModal();
+        
+        // Show QR code modal for the newly created bin
+        if (response.data) {
+          setQrBinData(response.data);
+          setOpenQRModal(true);
+        }
+        
         // Reload bins to show the newly created one
         loadUserBins();
       } else {
@@ -649,7 +671,14 @@ const MyBins = () => {
                 <span>View Details</span>
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
+              <button 
+                onClick={() => handleOpenQRModal(bin)}
+                className="flex items-center justify-center space-x-2 bg-purple-50 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium border border-purple-200"
+              >
+                <MdQrCode className="text-lg" />
+                <span>QR Code</span>
+              </button>
               <button 
                 onClick={() => handleOpenFillLevelModal(bin)}
                 className="flex items-center justify-center space-x-2 bg-blue-50 text-blue-700 py-2 px-3 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200"
@@ -1355,6 +1384,14 @@ const MyBins = () => {
           </div>
         </div>
       )}
+
+      {/* QR Code Modal */}
+      <QRGenerator
+        isOpen={openQRModal}
+        onClose={handleCloseQRModal}
+        binData={qrBinData}
+        getBinTypeLabel={getBinTypeLabel}
+      />
 
       {/* Snackbar */}
       {snackbar.open && (

@@ -14,7 +14,8 @@ import {
   MdCheckCircle,
   MdInfo,
   MdLocalShipping,
-  MdAttachMoney
+  MdAttachMoney,
+  MdPictureAsPdf
 } from 'react-icons/md';
 import { getBinsAnalysis } from '../../../utils/api.jsx';
 
@@ -25,6 +26,7 @@ const BinsAnalysis = () => {
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState('30d');
   const [reportType, setReportType] = useState('operational');
+  const [isExporting, setIsExporting] = useState(false);
 
   const reportTypes = [
     { id: 'operational', name: 'Operational', icon: <MdLocalShipping />, color: '#3b82f6' },
@@ -62,6 +64,295 @@ const BinsAnalysis = () => {
 
   const handleBack = () => {
     navigate('/admin/analytics');
+  };
+
+  const handleExportToPDF = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Import jsPDF and html2canvas dynamically
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ]);
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (2 * margin);
+      
+      let currentY = margin;
+
+      // Helper function to convert hex to RGB
+      const hexToRgb = (hex) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16)
+        } : null;
+      };
+
+      // Helper function to add a new page if needed
+      const checkNewPage = (requiredHeight) => {
+        if (currentY + requiredHeight > pageHeight - margin) {
+          pdf.addPage();
+          currentY = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Helper function to draw a line
+      const drawLine = (y, color = '#E5E7EB') => {
+        const rgb = hexToRgb(color);
+        if (rgb) {
+          pdf.setDrawColor(rgb.r, rgb.g, rgb.b);
+        } else {
+          pdf.setDrawColor(229, 231, 235); // Default gray
+        }
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, y, pageWidth - margin, y);
+      };
+
+      // Helper function to add text with proper formatting
+      const addText = (text, x, y, options = {}) => {
+        const { fontSize = 12, fontStyle = 'normal', color = '#000000', align = 'left' } = options;
+        pdf.setFontSize(fontSize);
+        pdf.setFont(undefined, fontStyle);
+        
+        // Convert hex color to RGB for setTextColor
+        const rgb = hexToRgb(color);
+        if (rgb) {
+          pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+        } else {
+          pdf.setTextColor(0, 0, 0); // Default to black
+        }
+        
+        pdf.text(String(text), x, y, { align });
+      };
+
+      // Helper function to add a colored box
+      const addColoredBox = (x, y, width, height, color, text, textColor = '#FFFFFF') => {
+        const rgb = hexToRgb(color);
+        if (rgb) {
+          pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+        }
+        pdf.rect(x, y, width, height, 'F');
+        addText(String(text), x + width/2, y + height/2 + 2, { 
+          fontSize: 10, 
+          fontStyle: 'bold', 
+          color: textColor, 
+          align: 'center' 
+        });
+      };
+
+      // 1. HEADER SECTION
+      pdf.setFillColor(16, 185, 129); // Emerald green
+      pdf.rect(0, 0, pageWidth, 35, 'F');
+      
+      // Company/System Name
+      addText('WASTE MANAGEMENT SYSTEM', margin, 15, { 
+        fontSize: 18, 
+        fontStyle: 'bold', 
+        color: '#FFFFFF' 
+      });
+      
+      // Report Title
+      addText('BINS ANALYSIS REPORT', margin, 25, { 
+        fontSize: 14, 
+        fontStyle: 'normal', 
+        color: '#FFFFFF' 
+      });
+
+      currentY = 45;
+
+      // 2. REPORT METADATA
+      addText('Report Information', margin, currentY, { 
+        fontSize: 14, 
+        fontStyle: 'bold', 
+        color: '#059669' 
+      });
+      currentY += 8;
+      
+      drawLine(currentY, '#E5E7EB');
+      currentY += 5;
+
+      const reportDate = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const reportTime = new Date().toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+
+      addText(`Generated On: ${reportDate} at ${reportTime}`, margin, currentY, { fontSize: 10 });
+      currentY += 5;
+      addText(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Analysis`, margin, currentY, { fontSize: 10 });
+      currentY += 5;
+      addText(`Date Range: ${dateRange === '30d' ? 'Last 30 Days' : 'All Time'}`, margin, currentY, { fontSize: 10 });
+      currentY += 5;
+      addText(`Total Bins Analyzed: ${binsData?.summary?.totalBins || 'N/A'}`, margin, currentY, { fontSize: 10 });
+      
+      currentY += 15;
+
+      // 3. EXECUTIVE SUMMARY
+      addText('Executive Summary', margin, currentY, { 
+        fontSize: 14, 
+        fontStyle: 'bold', 
+        color: '#059669' 
+      });
+      currentY += 8;
+      
+      drawLine(currentY, '#E5E7EB');
+      currentY += 10;
+
+      if (binsData?.summary) {
+        const summary = binsData.summary;
+        
+        // Summary metrics in a table format
+        const metrics = [
+          { label: 'Total Bins', value: summary.totalBins, color: '#10B981' },
+          { label: 'Need Collection', value: summary.binsNeedingCollection, color: '#EF4444' },
+          { label: 'Average Fill Level', value: `${summary.avgFill.toFixed(1)}%`, color: '#3B82F6' },
+          { label: 'Average Capacity', value: `${summary.avgCapacity.toFixed(0)}L`, color: '#8B5CF6' }
+        ];
+
+        const boxWidth = (contentWidth - 15) / 4;
+        const boxHeight = 25;
+
+        checkNewPage(boxHeight + 10);
+
+        metrics.forEach((metric, index) => {
+          const x = margin + (index * (boxWidth + 5));
+          addColoredBox(x, currentY, boxWidth, boxHeight, metric.color, metric.value, '#FFFFFF');
+          addText(metric.label, x + boxWidth/2, currentY + boxHeight + 5, { 
+            fontSize: 8, 
+            align: 'center', 
+            color: '#6B7280' 
+          });
+        });
+
+        currentY += boxHeight + 15;
+      }
+
+      // 4. DETAILED ANALYSIS
+      currentY += 10;
+      addText('Detailed Analysis', margin, currentY, { 
+        fontSize: 14, 
+        fontStyle: 'bold', 
+        color: '#059669' 
+      });
+      currentY += 8;
+      
+      drawLine(currentY, '#E5E7EB');
+      currentY += 10;
+
+      // Fill Level Distribution
+      if (binsData?.fillLevelDistribution) {
+        checkNewPage(40);
+        addText('Fill Level Distribution', margin, currentY, { 
+          fontSize: 12, 
+          fontStyle: 'bold', 
+          color: '#374151' 
+        });
+        currentY += 8;
+
+        binsData.fillLevelDistribution.forEach((item, index) => {
+          checkNewPage(8);
+          const percentage = ((item.count / binsData.summary.totalBins) * 100).toFixed(1);
+          addText(`${item._id}: ${item.count} bins (${percentage}%)`, margin + 10, currentY, { fontSize: 10 });
+          currentY += 6;
+        });
+        currentY += 10;
+      }
+
+      // Bins by Type
+      if (binsData?.binsByType) {
+        checkNewPage(40);
+        addText('Bins by Type', margin, currentY, { 
+          fontSize: 12, 
+          fontStyle: 'bold', 
+          color: '#374151' 
+        });
+        currentY += 8;
+
+        binsData.binsByType.forEach((item, index) => {
+          checkNewPage(12);
+          addText(`${item._id}:`, margin + 10, currentY, { fontSize: 10, fontStyle: 'bold' });
+          currentY += 5;
+          addText(`  • Count: ${item.count} bins`, margin + 15, currentY, { fontSize: 9 });
+          currentY += 4;
+          addText(`  • Avg Fill: ${item.avgFill.toFixed(1)}%`, margin + 15, currentY, { fontSize: 9 });
+          currentY += 4;
+          addText(`  • Avg Capacity: ${item.avgCapacity.toFixed(0)}L`, margin + 15, currentY, { fontSize: 9 });
+          currentY += 8;
+        });
+        currentY += 10;
+      }
+
+      // District Analysis
+      if (binsData?.binsByDistrict) {
+        checkNewPage(50);
+        addText('District Analysis', margin, currentY, { 
+          fontSize: 12, 
+          fontStyle: 'bold', 
+          color: '#374151' 
+        });
+        currentY += 8;
+
+        binsData.binsByDistrict.forEach((district, index) => {
+          checkNewPage(20);
+          addText(`${district._id} District:`, margin + 10, currentY, { fontSize: 10, fontStyle: 'bold' });
+          currentY += 5;
+          addText(`  • Total Bins: ${district.totalBins}`, margin + 15, currentY, { fontSize: 9 });
+          currentY += 4;
+          addText(`  • Average Fill: ${district.avgFill.toFixed(1)}%`, margin + 15, currentY, { fontSize: 9 });
+          currentY += 4;
+          addText(`  • High Fill Bins: ${district.highFillBins}`, margin + 15, currentY, { fontSize: 9 });
+          currentY += 4;
+          addText(`  • Low Fill Bins: ${district.lowFillBins}`, margin + 15, currentY, { fontSize: 9 });
+          currentY += 8;
+        });
+      }
+
+      // 5. FOOTER
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        
+        // Footer line
+        pdf.setDrawColor('#E5E7EB');
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
+        
+        // Page number
+        addText(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 10, { 
+          fontSize: 9, 
+          align: 'right', 
+          color: '#6B7280' 
+        });
+        
+        // Footer text
+        addText('Generated by Waste Management System', margin, pageHeight - 10, { 
+          fontSize: 9, 
+          color: '#6B7280' 
+        });
+      }
+
+      const fileName = `Bins_Analysis_${reportType.charAt(0).toUpperCase() + reportType.slice(1)}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+
+      alert('Professional PDF report generated successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF: ' + error.message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getFillLevelColor = (fillLevel) => {
@@ -202,6 +493,15 @@ const BinsAnalysis = () => {
                 <MdRefresh className={`text-xl ${loading ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
                 <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
               </button>
+
+              <button
+                onClick={handleExportToPDF}
+                disabled={isExporting || !binsData}
+                className="group flex items-center space-x-3 bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-3 rounded-2xl hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
+              >
+                <MdPictureAsPdf className={`text-xl ${isExporting ? 'animate-pulse' : 'group-hover:animate-bounce'}`} />
+                <span>{isExporting ? 'Generating PDF...' : 'Export PDF'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -233,72 +533,77 @@ const BinsAnalysis = () => {
         </div>
 
         {/* Content based on selected tab */}
+        <div id="bins-analysis-content">
         {reportType === 'operational' && (
           <>
             {/* Enhanced Summary Cards */}
             <div className="flex justify-center">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl">
-              <div className="group bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 transform hover:-translate-y-2">
-                <div className="flex items-center justify-between">
+              {/* Total Bins Card */}
+              <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-emerald-600 text-sm font-semibold mb-1">Total Bins</p>
-                    <p className="text-4xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">{binsData.summary.totalBins}</p>
-                    <p className="text-emerald-500 text-xs mt-1">Active in system</p>
+                    <h3 className="text-green-600 text-sm font-semibold mb-1">Total Bins</h3>
+                    <p className="text-4xl font-bold text-green-600">{binsData.summary.totalBins}</p>
+                    <p className="text-green-600 text-xs mt-1">Active in system</p>
                   </div>
-                  <div className="bg-gradient-to-br from-emerald-100 to-green-100 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                    <MdStorage className="text-3xl text-emerald-600" />
+                  <div className="bg-green-100 p-3 rounded-xl">
+                    <MdStorage className="text-2xl text-green-600" />
                   </div>
                 </div>
-                <div className="mt-4 w-full bg-emerald-100 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-emerald-500 to-green-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+                <div className="w-full bg-green-200 rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '100%' }}></div>
                 </div>
               </div>
 
-              <div className="group bg-white/80 backdrop-blur-sm border border-red-200/50 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 transform hover:-translate-y-2">
-                <div className="flex items-center justify-between">
+              {/* Need Collection Card */}
+              <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-red-600 text-sm font-semibold mb-1">Need Collection</p>
-                    <p className="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">{binsData.summary.binsNeedingCollection}</p>
-                    <p className="text-red-500 text-xs mt-1">High fill level</p>
+                    <h3 className="text-red-600 text-sm font-semibold mb-1">Need Collection</h3>
+                    <p className="text-4xl font-bold text-red-600">{binsData.summary.binsNeedingCollection}</p>
+                    <p className="text-red-600 text-xs mt-1">High fill level</p>
                   </div>
-                  <div className="bg-gradient-to-br from-red-100 to-orange-100 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                    <MdWarning className="text-3xl text-red-600" />
+                  <div className="bg-red-100 p-3 rounded-xl">
+                    <MdWarning className="text-2xl text-red-600" />
                   </div>
                 </div>
-                <div className="mt-4 w-full bg-red-100 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-red-500 to-orange-500 h-2 rounded-full" style={{ width: `${(binsData.summary.binsNeedingCollection / binsData.summary.totalBins) * 100}%` }}></div>
+                <div className="w-full bg-red-200 rounded-full h-2">
+                  <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.max((binsData.summary.binsNeedingCollection / binsData.summary.totalBins) * 100, 5)}%` }}></div>
                 </div>
               </div>
 
-              <div className="group bg-white/80 backdrop-blur-sm border border-blue-200/50 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 transform hover:-translate-y-2">
-                <div className="flex items-center justify-between">
+              {/* Avg Fill Level Card */}
+              <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-blue-600 text-sm font-semibold mb-1">Avg Fill Level</p>
-                    <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{binsData.summary.avgFill.toFixed(1)}%</p>
-                    <p className="text-blue-500 text-xs mt-1">System average</p>
+                    <h3 className="text-blue-600 text-sm font-semibold mb-1">Avg Fill Level</h3>
+                    <p className="text-4xl font-bold text-blue-600">{binsData.summary.avgFill.toFixed(1)}%</p>
+                    <p className="text-blue-600 text-xs mt-1">System average</p>
                   </div>
-                  <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                    <MdTrendingUp className="text-3xl text-blue-600" />
+                  <div className="bg-blue-100 p-3 rounded-xl">
+                    <MdTrendingUp className="text-2xl text-blue-600" />
                   </div>
                 </div>
-                <div className="mt-4 w-full bg-blue-100 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full" style={{ width: `${binsData.summary.avgFill}%` }}></div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${binsData.summary.avgFill}%` }}></div>
                 </div>
               </div>
 
-              <div className="group bg-white/80 backdrop-blur-sm border border-purple-200/50 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 transform hover:-translate-y-2">
-                <div className="flex items-center justify-between">
+              {/* Avg Capacity Card */}
+              <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-purple-600 text-sm font-semibold mb-1">Avg Capacity</p>
-                    <p className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{binsData.summary.avgCapacity.toFixed(0)}L</p>
-                    <p className="text-purple-500 text-xs mt-1">Per bin</p>
+                    <h3 className="text-purple-600 text-sm font-semibold mb-1">Avg Capacity</h3>
+                    <p className="text-4xl font-bold text-purple-600">{binsData.summary.avgCapacity.toFixed(0)}L</p>
+                    <p className="text-purple-600 text-xs mt-1">Per bin</p>
                   </div>
-                  <div className="bg-gradient-to-br from-purple-100 to-pink-100 p-4 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                    <MdStorage className="text-3xl text-purple-600" />
+                  <div className="bg-purple-100 p-3 rounded-xl">
+                    <MdStorage className="text-2xl text-purple-600" />
                   </div>
                 </div>
-                <div className="mt-4 w-full bg-purple-100 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                <div className="w-full bg-purple-200 rounded-full h-2">
+                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: '69%' }}></div>
                 </div>
               </div>
               </div>
@@ -501,6 +806,7 @@ const BinsAnalysis = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

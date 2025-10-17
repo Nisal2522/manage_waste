@@ -37,6 +37,7 @@ import UserAnalytics from "./pages/dashboard/admin/UserAnalytics.jsx";
 import BinsAnalysis from "./pages/dashboard/admin/BinsAnalysis.jsx";
 import StaffDashboard from "./pages/dashboard/staff/StaffDashboard.jsx";
 import StaffDataCollection from "./pages/dashboard/staff/StaffDataCollection.jsx";
+import StaffQRCollection from "./pages/dashboard/staff/StaffQRCollection.jsx";
 import ResidentDataContribution from "./pages/dashboard/resident/ResidentDataContribution.jsx";
 
 
@@ -314,6 +315,16 @@ function App() {
                     <ProtectedRoute allowedRoles={["staff", "admin"]}>
                       <LayoutWrapper>
                         <StaffDataCollection />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/staff/qr-collection"
+                  element={
+                    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                      <LayoutWrapper>
+                        <StaffQRCollection />
                       </LayoutWrapper>
                     </ProtectedRoute>
                   }

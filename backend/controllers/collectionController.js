@@ -73,13 +73,26 @@ export const getCollectionById = async (req, res) => {
 // Create new collection
 export const createCollection = async (req, res) => {
   try {
-    const { bin, staff, resident, wasteType, weight, status, qrScanned } = req.body;
+    console.log('📝 Collection creation request received');
+    console.log('Request body:', req.body);
+    console.log('User from auth:', req.user);
+    
+    const { bin, staff, resident, weight, isCollected } = req.body;
 
     // Validate required fields
-    if (!bin || !staff || !resident || !wasteType) {
+    if (!bin || !staff || !resident || weight === undefined || isCollected === undefined) {
+      console.log('❌ Missing required fields:', { bin: !!bin, staff: !!staff, resident: !!resident, weight, isCollected });
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: bin, staff, resident, wasteType'
+        message: 'Missing required fields: bin, staff, resident, weight, isCollected'
+      });
+    }
+
+    // Validate weight
+    if (isNaN(weight) || weight < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Weight must be a valid positive number'
       });
     }
 
@@ -114,13 +127,21 @@ export const createCollection = async (req, res) => {
       bin,
       staff,
       resident,
-      wasteType,
       weight,
-      status: status || 'scheduled',
-      qrScanned: qrScanned || false
+      isCollected
     });
 
     await collection.save();
+    console.log('✅ Collection saved to database:', collection._id);
+
+    // Reset bin fill level to 0% after successful collection
+    if (isCollected) {
+      await Bin.findByIdAndUpdate(bin, { 
+        currentFill: 0,
+        lastCollection: new Date()
+      });
+      console.log('✅ Bin fill level reset to 0%');
+    }
 
     // Populate the created collection
     const populatedCollection = await Collection.findById(collection._id)
@@ -128,6 +149,7 @@ export const createCollection = async (req, res) => {
       .populate('staff', 'name email role')
       .populate('resident', 'name email');
 
+    console.log('✅ Collection created successfully:', populatedCollection._id);
     res.status(201).json({
       success: true,
       data: populatedCollection,
@@ -251,9 +273,45 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
-    // Parse QR data (assuming it contains bin ID)
-    const binId = qrData;
-    const bin = await Bin.findById(binId);
+    let binId = null;
+    let bin = null;
+
+    // Handle different QR data formats
+    if (qrData.startsWith('http')) {
+      // Extract bin ID from URL (e.g., http://localhost:3000/bin/64f8a1b2c3d4e5f6a7b8c9d0)
+      const urlParts = qrData.split('/');
+      binId = urlParts[urlParts.length - 1];
+    } else {
+      try {
+        // Try to parse as JSON
+        const qrJson = JSON.parse(qrData);
+        if (qrJson.binId) {
+          binId = qrJson.binId;
+        } else if (qrJson.url) {
+          // Extract bin ID from JSON URL
+          const urlParts = qrJson.url.split('/');
+          binId = urlParts[urlParts.length - 1];
+        }
+      } catch (jsonError) {
+        // If not JSON, treat as direct bin ID
+        binId = qrData;
+      }
+    }
+
+    if (!binId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Could not extract bin ID from QR data'
+      });
+    }
+
+    // Try to find bin by ID first
+    bin = await Bin.findById(binId);
+    
+    // If not found by ID, try to find by binId field
+    if (!bin) {
+      bin = await Bin.findOne({ binId: binId });
+    }
 
     if (!bin) {
       return res.status(404).json({
@@ -262,10 +320,13 @@ export const scanQRCode = async (req, res) => {
       });
     }
 
+    // Populate the bin with user information
+    const populatedBin = await Bin.findById(bin._id).populate('userId', 'name email');
+
     res.json({
       success: true,
       data: {
-        bin: bin,
+        bin: populatedBin,
         message: 'QR code scanned successfully'
       }
     });

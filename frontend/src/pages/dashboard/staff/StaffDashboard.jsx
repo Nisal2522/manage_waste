@@ -41,7 +41,8 @@ import {
   Add,
   MoreVert,
   Directions,
-  Assignment
+  Assignment,
+  QrCodeScanner
 } from '@mui/icons-material';
 
 const StaffDashboard = () => {
@@ -102,19 +103,34 @@ const StaffDashboard = () => {
                 Manage your collection routes and track your daily performance.
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<Assignment />}
-              onClick={() => navigate('/staff/data-collection')}
-              sx={{
-                background: 'linear-gradient(45deg, #10b981, #059669)',
-                '&:hover': {
-                  background: 'linear-gradient(45deg, #059669, #047857)'
-                }
-              }}
-            >
-              Data Collection
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={<Assignment />}
+                onClick={() => navigate('/staff/data-collection')}
+                sx={{
+                  background: 'linear-gradient(45deg, #10b981, #059669)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #059669, #047857)'
+                  }
+                }}
+              >
+                Data Collection
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<QrCodeScanner />}
+                onClick={() => navigate('/staff/qr-collection')}
+                sx={{
+                  background: 'linear-gradient(45deg, #3b82f6, #2563eb)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #2563eb, #1d4ed8)'
+                  }
+                }}
+              >
+                QR Collection
+              </Button>
+            </Box>
           </Box>
         </Box>
 
