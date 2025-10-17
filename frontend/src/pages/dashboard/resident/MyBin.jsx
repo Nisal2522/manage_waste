@@ -7,12 +7,12 @@ import {
   MdOpacity,
   MdDelete,
   MdEdit,
-  MdVisibility,
   MdRecycling,
   MdSchedule,
   MdWarning,
   MdInfo
 } from 'react-icons/md';
+import { FaEye } from 'react-icons/fa';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { getBinRequestsByUser, createBin, getBinsByUser, updateBinFillLevel, deleteBin } from '../../../utils/api.jsx';
 
@@ -645,7 +645,7 @@ const MyBins = () => {
                 <span>Request Collection</span>
               </button>
               <button className="flex items-center justify-center space-x-2 bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                <MdVisibility className="text-lg" />
+                <FaEye className="text-lg" />
                 <span>View Details</span>
               </button>
             </div>

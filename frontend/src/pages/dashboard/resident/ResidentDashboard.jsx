@@ -14,8 +14,7 @@ import {
   MdMoreVert,
   MdRequestPage,
   MdDelete,
-  MdEdit,
-  MdVisibility
+  MdEdit
 } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
@@ -135,12 +134,23 @@ const ResidentDashboard = () => {
       <div className="relative z-10 p-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Welcome Back{user?.name ? `, ${user.name}` : user?.user?.name ? `, ${user.user.name}` : ''}! 👋
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Track your waste management activities and environmental impact.
-          </p>
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                Welcome Back{user?.name ? `, ${user.name}` : user?.user?.name ? `, ${user.user.name}` : ''}! 👋
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Track your waste management activities and environmental impact.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/resident/data-contribution')}
+              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-xl hover:from-emerald-700 hover:to-green-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
+            >
+              <MdRecycling className="text-xl" />
+              <span>Contribute Data</span>
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}

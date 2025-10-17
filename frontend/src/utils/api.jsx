@@ -182,23 +182,65 @@ export const getCollectionsByDate = async (date) => {
 };
 
 // Analytics API
-export const getAnalytics = async (params = {}) => {
-  const response = await api.get('/analytics', { params });
+export const getOperationalAnalytics = async (params = {}) => {
+  const response = await api.get('/analytics/test/operational', { params });
   return response.data;
 };
 
-export const getCollectionStats = async (params = {}) => {
-  const response = await api.get('/analytics/collections', { params });
+export const getFinancialAnalytics = async (params = {}) => {
+  const response = await api.get('/analytics/test/financial', { params });
   return response.data;
 };
 
-export const getRouteStats = async (params = {}) => {
+export const getSustainabilityAnalytics = async (params = {}) => {
+  const response = await api.get('/analytics/test/sustainability', { params });
+  return response.data;
+};
+
+// District Analysis API
+export const getDistrictAnalysis = async (params = {}) => {
+  const response = await api.get('/analytics/districts', { params });
+  return response.data;
+};
+
+export const getDistrictAnalysisByUser = async (userId, params = {}) => {
+  const response = await api.get(`/analytics/districts/user/${userId}`, { params });
+  return response.data;
+};
+
+export const getRouteOptimization = async (params = {}) => {
   const response = await api.get('/analytics/routes', { params });
   return response.data;
 };
 
-export const getBinStats = async (params = {}) => {
-  const response = await api.get('/analytics/bins', { params });
+export const optimizeRoutes = async (routeData) => {
+  const response = await api.post('/analytics/routes/optimize', routeData);
+  return response.data;
+};
+
+export const applyOptimizedRoutes = async (optimizedRoutes) => {
+  const response = await api.post('/analytics/routes/apply', { optimizedRoutes });
+  return response.data;
+};
+
+export const runSimulation = async (simulationData) => {
+  const response = await api.post('/analytics/simulation', simulationData);
+  return response.data;
+};
+
+export const exportAnalyticsReport = async (params = {}) => {
+  const response = await api.get('/analytics/export', { params });
+  return response.data;
+};
+
+// User Management API
+export const getAllUsers = async () => {
+  const response = await api.get('/users');
+  return response.data;
+};
+
+export const getUserStats = async () => {
+  const response = await api.get('/user-stats');
   return response.data;
 };
 
