@@ -113,6 +113,13 @@ const AdminCollections = () => {
 
   // Open invoice dialog
   const handleOpenInvoiceDialog = (collection) => {
+    // Check if invoice already exists
+    if (collection.invoice) {
+      setError(`Invoice ${collection.invoice.invoiceNumber} already exists for this collection.`);
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
     setSelectedCollection(collection);
     setInvoiceData({
       ratePerKg: 5,
@@ -389,20 +396,34 @@ const AdminCollections = () => {
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
-                        <Box display="flex" gap={1} justifyContent="center">
-                          <Tooltip title="Generate Invoice">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => handleOpenInvoiceDialog(collection)}
-                              sx={{
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.2)' }
-                              }}
-                            >
-                              <ReceiptIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                        <Box display="flex" gap={1} justifyContent="center" alignItems="center">
+                          {collection.invoice ? (
+                            // Invoice already exists
+                            <Tooltip title={`Invoice ${collection.invoice.invoiceNumber} - ${collection.invoice.status}`}>
+                              <Chip
+                                icon={<CheckCircleIcon />}
+                                label={collection.invoice.status === 'paid' ? 'Paid' : 'Invoiced'}
+                                size="small"
+                                color={collection.invoice.status === 'paid' ? 'success' : 'info'}
+                                sx={{ cursor: 'default' }}
+                              />
+                            </Tooltip>
+                          ) : (
+                            // No invoice - show create button
+                            <Tooltip title="Generate Invoice">
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                onClick={() => handleOpenInvoiceDialog(collection)}
+                                sx={{
+                                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                  '&:hover': { backgroundColor: 'rgba(16, 185, 129, 0.2)' }
+                                }}
+                              >
+                                <ReceiptIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>
