@@ -130,3 +130,6 @@ export const requireStaff = requireRole(['staff', 'admin']);
 
 // Middleware to check if user is finance or admin
 export const requireFinance = requireRole(['finance', 'admin']);
+
+// Default auth middleware (alias for authenticateToken)
+export const authMiddleware = authenticateToken();

@@ -7,6 +7,10 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import binRequestRoutes from './routes/binRequests.js';
 import binRoutes from './routes/bins.js';
+import userRoutes from './routes/users.js';
+import analyticsRoutes from './routes/analytics.js';
+import testAnalyticsRoutes from './routes/testAnalytics.js';
+import userStatsRoutes from './routes/userStats.js';
 
 dotenv.config();
 
@@ -45,6 +49,10 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/bin-requests', binRequestRoutes);
 app.use('/api/bins', binRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/test-analytics', testAnalyticsRoutes);
+app.use('/api/user-stats', userStatsRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
