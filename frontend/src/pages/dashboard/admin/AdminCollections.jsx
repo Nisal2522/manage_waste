@@ -35,7 +35,8 @@ import {
   FilterList as FilterIcon,
   Download as DownloadIcon,
   CheckCircle as CheckCircleIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import { getCollections, createInvoiceFromCollection } from '../../../utils/api';
 
@@ -201,6 +202,248 @@ const AdminCollections = () => {
     });
   };
 
+  // Generate PDF Report for Collections
+  const generatePDFReport = () => {
+    const reportTitle = 'Waste Collections Report';
+    const reportDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // Filter information
+    const filterInfo = [];
+    if (filterStatus !== 'all') {
+      filterInfo.push(`Status: ${filterStatus === 'collected' ? 'Collected' : 'Pending'}`);
+    }
+    if (filterWasteType !== 'all') filterInfo.push(`Waste Type: ${filterWasteType}`);
+    if (!showPaidInvoices) filterInfo.push('Showing: Unpaid/No Invoice only');
+
+    // Calculate statistics
+    const totalWeight = filteredCollections.reduce((sum, c) => sum + (c.weight || 0), 0);
+    const collectedCount = filteredCollections.filter(c => c.isCollected).length;
+    const pendingCount = filteredCollections.filter(c => !c.isCollected).length;
+    const invoicedCount = filteredCollections.filter(c => c.invoice).length;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${reportTitle}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #10b981;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            color: #10b981;
+            margin: 0;
+            font-size: 28px;
+          }
+          .header .date {
+            color: #666;
+            margin-top: 5px;
+          }
+          .filters {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+          }
+          .filters h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+          }
+          .filters p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+          }
+          .summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+          }
+          .summary-card {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+          }
+          .summary-card h3 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: bold;
+          }
+          .summary-card p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+          }
+          .summary-card.collected { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+          .summary-card.pending { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+          .summary-card.invoiced { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 11px;
+          }
+          th {
+            background: #10b981;
+            color: white;
+            padding: 10px 6px;
+            text-align: left;
+            font-weight: 600;
+          }
+          td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          tr:nth-child(even) {
+            background: #f9fafb;
+          }
+          tr:hover {
+            background: #f3f4f6;
+          }
+          .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          .status.collected { background: #d1fae5; color: #065f46; }
+          .status.pending { background: #fef3c7; color: #92400e; }
+          .invoice-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+          }
+          .invoice-status.paid { background: #d1fae5; color: #065f46; }
+          .invoice-status.invoiced { background: #dbeafe; color: #1e40af; }
+          .invoice-status.none { background: #e5e7eb; color: #374151; }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 20px;
+          }
+          .total-row {
+            font-weight: bold;
+            background: #f3f4f6 !important;
+            border-top: 2px solid #10b981;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🗑️ ${reportTitle}</h1>
+          <p class="date">Generated on ${reportDate}</p>
+        </div>
+
+        ${filterInfo.length > 0 ? `
+        <div class="filters">
+          <h3>Applied Filters:</h3>
+          ${filterInfo.map(f => `<p>• ${f}</p>`).join('')}
+        </div>
+        ` : ''}
+
+        <div class="summary">
+          <div class="summary-card">
+            <h3>${filteredCollections.length}</h3>
+            <p>Total Collections</p>
+          </div>
+          <div class="summary-card collected">
+            <h3>${collectedCount}</h3>
+            <p>Collected</p>
+          </div>
+          <div class="summary-card pending">
+            <h3>${pendingCount}</h3>
+            <p>Pending</p>
+          </div>
+          <div class="summary-card invoiced">
+            <h3>${invoicedCount}</h3>
+            <p>Invoiced</p>
+          </div>
+        </div>
+
+        <h2>Collection Details (${filteredCollections.length} records)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Bin ID</th>
+              <th>Resident</th>
+              <th>Staff</th>
+              <th>Waste Type</th>
+              <th>Weight (kg)</th>
+              <th>Status</th>
+              <th>Collection Time</th>
+              <th>Invoice</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredCollections.map(collection => `
+              <tr>
+                <td>${collection.bin?.binId || 'N/A'}</td>
+                <td>
+                  ${collection.resident?.name || 'Unknown'}<br>
+                  <small style="color: #666;">${collection.resident?.email || 'N/A'}</small>
+                </td>
+                <td>${collection.staff?.name || 'Unknown'}</td>
+                <td>${collection.bin?.binType || 'Mixed'}</td>
+                <td>${collection.weight?.toFixed(2) || '0.00'}</td>
+                <td><span class="status ${collection.isCollected ? 'collected' : 'pending'}">${collection.isCollected ? 'Collected' : 'Pending'}</span></td>
+                <td>${formatDate(collection.collectionTime)}</td>
+                <td>
+                  ${collection.invoice 
+                    ? `<span class="invoice-status ${collection.invoice.status}">${collection.invoice.status === 'paid' ? 'Paid' : 'Invoiced'}</span><br><small>${collection.invoice.invoiceNumber}</small>`
+                    : '<span class="invoice-status none">No Invoice</span>'
+                  }
+                </td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="4" style="text-align: right;">TOTAL WEIGHT:</td>
+              <td>${totalWeight.toFixed(2)} kg</td>
+              <td colspan="3"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <p>Waste Management System - Collections Report</p>
+          <p>This report was automatically generated on ${new Date().toLocaleString()}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
   return (
     <Box sx={{ 
       backgroundColor: '#f8fafc', 
@@ -300,6 +543,23 @@ const AdminCollections = () => {
               <Typography variant="body2" color="text.secondary">
                 Total Collections: <strong>{filteredCollections.length}</strong>
               </Typography>
+            </Grid>
+            <Grid item xs={12} display="flex" justifyContent="flex-end">
+              <Button
+                variant="contained"
+                startIcon={<PdfIcon />}
+                onClick={generatePDFReport}
+                sx={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  textTransform: 'none',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                  }
+                }}
+              >
+                Export PDF Report
+              </Button>
             </Grid>
           </Grid>
         </Paper>
