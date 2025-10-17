@@ -12,7 +12,9 @@ import {
   MdPeople,
   MdPersonAdd,
   MdTrendingUp,
-  MdSecurity
+  MdSecurity,
+  MdDownload,
+  MdRefresh
 } from 'react-icons/md';
 import { 
   FaEye, 
@@ -37,6 +39,7 @@ import { LuCalendarClock } from 'react-icons/lu';
 import { useAuth } from '../../../context/AuthContext';
 import { getAllUsers, updateUser, deleteUser, getUserStats } from '../../../utils/api';
 import { useNavigate } from 'react-router-dom';
+import ExportPdfHtml2Canvas from '../../../components/ExportPdfHtml2Canvas';
 
 const AdminUserManagement = () => {
   const { user } = useAuth();
@@ -269,6 +272,79 @@ const AdminUserManagement = () => {
     navigate('/admin/dashboard');
   };
 
+  const handleExportToPDF = async () => {
+    try {
+      const input = document.getElementById('user-management-content');
+      if (!input) {
+        setSnackbar({
+          open: true,
+          message: 'Content not found for export',
+          severity: 'error'
+        });
+        return;
+      }
+
+      // Import jsPDF and html2canvas dynamically
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ]);
+
+      // Capture element
+      const canvas = await html2canvas(input, { 
+        scale: 2, 
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // If content higher than one page, split
+      if (pdfHeight <= pdf.internal.pageSize.getHeight()) {
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      } else {
+        let heightLeft = pdfHeight;
+        let position = 0;
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        // Add first page slice
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+
+        // Add more pages
+        while (heightLeft > 0) {
+          position = heightLeft - pdfHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pageHeight;
+        }
+      }
+
+      const fileName = `users-export-${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+
+      setSnackbar({
+        open: true,
+        message: 'PDF exported successfully to downloads folder!',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error generating PDF: ' + error.message,
+        severity: 'error'
+      });
+    }
+  };
+
+
   // Filter users
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -313,7 +389,7 @@ const AdminUserManagement = () => {
   return (
     <div className="flex-1 p-6 min-h-screen bg-white relative overflow-hidden">
       
-      <div className="relative z-10 max-w-7xl mx-auto">
+      <div className="relative z-10 max-w-7xl mx-auto" id="user-management-content">
         {/* Header */}
         <div className="mb-8">
           <div className="bg-white border-4 border-blue-500 rounded-3xl p-8 shadow-xl" style={{borderImage: 'linear-gradient(45deg, #3b82f6, #8b5cf6) 1'}}>
@@ -322,14 +398,32 @@ const AdminUserManagement = () => {
                 <FaUsers className="text-blue-600 mr-3" size={40} />
                 User Management
               </h1>
-              <button
-                onClick={handleBackToDashboard}
-                className="flex items-center px-4 py-2 bg-gray-500/20 backdrop-blur-sm border border-gray-500/30 text-gray-600 rounded-xl hover:bg-gray-500/30 hover:border-gray-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-gray-500/25"
-                title="Back to Admin Dashboard"
-              >
-                <FaArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </button>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={fetchUsers}
+                  className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
+                  title="Refresh Users"
+                >
+                  <MdRefresh className="w-4 h-4 mr-2" />
+                  Refresh
+                </button>
+                <button
+                  onClick={handleExportToPDF}
+                  className="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 border border-green-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                  title="Export Users to PDF"
+                >
+                  <MdDownload className="w-4 h-4 mr-2" />
+                  Export
+                </button>
+                <button
+                  onClick={handleBackToDashboard}
+                  className="flex items-center px-4 py-2 bg-gray-500/20 backdrop-blur-sm border border-gray-500/30 text-gray-600 rounded-xl hover:bg-gray-500/30 hover:border-gray-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-gray-500/25"
+                  title="Back to Admin Dashboard"
+                >
+                  <FaArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Dashboard
+                </button>
+              </div>
             </div>
             <p className="text-lg text-gray-600 font-light tracking-wide">
               Manage system users, roles, and permissions with advanced controls

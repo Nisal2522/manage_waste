@@ -208,6 +208,12 @@ export const getDistrictAnalysisByUser = async (userId, params = {}) => {
   return response.data;
 };
 
+// Bins Analysis API
+export const getBinsAnalysis = async (params = {}) => {
+  const response = await api.get('/analytics/bins', { params });
+  return response.data;
+};
+
 export const getRouteOptimization = async (params = {}) => {
   const response = await api.get('/analytics/routes', { params });
   return response.data;

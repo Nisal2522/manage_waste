@@ -11,6 +11,7 @@ import userRoutes from './routes/users.js';
 import analyticsRoutes from './routes/analytics.js';
 import testAnalyticsRoutes from './routes/testAnalytics.js';
 import userStatsRoutes from './routes/userStats.js';
+import collectionRoutes from './routes/collections.js';
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/test-analytics', testAnalyticsRoutes);
 app.use('/api/user-stats', userStatsRoutes);
+app.use('/api/collections', collectionRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

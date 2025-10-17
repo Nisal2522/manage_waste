@@ -933,15 +933,13 @@ const AdminBinRequests = () => {
                         <ListItem>
                           <ListItemText 
                             primary="Current Status" 
-                            secondary={
-                              <Chip 
-                                label={getStatusText(selectedRequest.status)} 
-                                size="small" 
-                                color={getStatusColor(selectedRequest.status)}
-                                sx={{ fontWeight: 600 }}
-                              />
-                            }
                             primaryTypographyProps={{ sx: { fontWeight: 600, color: colors.textPrimary, fontSize: '0.875rem' } }}
+                          />
+                          <Chip 
+                            label={getStatusText(selectedRequest.status)} 
+                            size="small" 
+                            color={getStatusColor(selectedRequest.status)}
+                            sx={{ fontWeight: 600 }}
                           />
                         </ListItem>
                       </List>

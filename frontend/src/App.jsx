@@ -34,6 +34,7 @@ import AdminUserManagement from "./pages/dashboard/admin/AdminUserManagement.jsx
 import AdminUsers from "./pages/dashboard/admin/AdminUsers.jsx";
 import AdminBinRequests from "./pages/dashboard/admin/AdminBinRequests.jsx";
 import UserAnalytics from "./pages/dashboard/admin/UserAnalytics.jsx";
+import BinsAnalysis from "./pages/dashboard/admin/BinsAnalysis.jsx";
 import StaffDashboard from "./pages/dashboard/staff/StaffDashboard.jsx";
 import StaffDataCollection from "./pages/dashboard/staff/StaffDataCollection.jsx";
 import ResidentDataContribution from "./pages/dashboard/resident/ResidentDataContribution.jsx";
@@ -265,16 +266,26 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/admin/user-analytics"
-                  element={
-                    <ProtectedRoute allowedRoles={["admin"]}>
-                      <LayoutWrapper>
-                        <UserAnalytics />
-                      </LayoutWrapper>
-                    </ProtectedRoute>
-                  }
-                />
+        <Route
+          path="/admin/user-analytics"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LayoutWrapper>
+                <UserAnalytics />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/bins-analysis"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LayoutWrapper>
+                <BinsAnalysis />
+              </LayoutWrapper>
+            </ProtectedRoute>
+          }
+        />
 
                 {/* Profile Route */}
                 <Route

@@ -399,6 +399,304 @@ const runSimulation = async (req, res) => {
   }
 };
 
+// Get district analysis
+const getDistrictAnalysis = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    // Get bins grouped by district (extracted from address)
+    const districtData = await Bin.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: {
+            $cond: {
+              if: { $regexMatch: { input: '$address', regex: /,\s*([^,]+)$/ } },
+              then: { $arrayElemAt: [{ $split: ['$address', ','] }, -1] },
+              else: 'Unknown District'
+            }
+          },
+          totalBins: { $sum: 1 },
+          totalFill: { $sum: '$currentFill' },
+          avgFill: { $avg: '$currentFill' },
+          highFillBins: {
+            $sum: {
+              $cond: [{ $gt: ['$currentFill', 80] }, 1, 0]
+            }
+          },
+          lowFillBins: {
+            $sum: {
+              $cond: [{ $lt: ['$currentFill', 20] }, 1, 0]
+            }
+          },
+          bins: {
+            $push: {
+              _id: '$_id',
+              currentFill: '$currentFill',
+              capacity: '$capacity',
+              address: '$address'
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          district: '$_id',
+          totalBins: 1,
+          avgFill: { $round: ['$avgFill', 1] },
+          highFillBins: 1,
+          lowFillBins: 1,
+          bins: 1,
+          _id: 0
+        }
+      },
+      { $sort: { avgFill: -1 } }
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        districts: districtData,
+        totalDistricts: districtData.length,
+        totalBins: districtData.reduce((sum, district) => sum + district.totalBins, 0)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching district analysis:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch district analysis',
+      error: error.message
+    });
+  }
+};
+
+// Get district analysis by user
+const getDistrictAnalysisByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { startDate, endDate } = req.query;
+    
+    const dateFilter = { user: userId };
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    // Get user's bins grouped by district
+    const districtData = await Bin.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: {
+            $cond: {
+              if: { $regexMatch: { input: '$address', regex: /,\s*([^,]+)$/ } },
+              then: { $arrayElemAt: [{ $split: ['$address', ','] }, -1] },
+              else: 'Unknown District'
+            }
+          },
+          totalBins: { $sum: 1 },
+          totalFill: { $sum: '$currentFill' },
+          averageFill: { $avg: '$currentFill' },
+          bins: {
+            $push: {
+              _id: '$_id',
+              currentFill: '$currentFill',
+              capacity: '$capacity',
+              address: '$address'
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          district: '$_id',
+          totalBins: 1,
+          averageFill: { $round: ['$averageFill', 1] },
+          bins: 1,
+          _id: 0
+        }
+      },
+      { $sort: { averageFill: -1 } }
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        districts: districtData,
+        totalDistricts: districtData.length,
+        totalBins: districtData.reduce((sum, district) => sum + district.totalBins, 0)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user district analysis:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user district analysis',
+      error: error.message
+    });
+  }
+};
+
+// Get comprehensive bins analysis
+const getBinsAnalysis = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    // Get total bins count
+    const totalBins = await Bin.countDocuments(dateFilter);
+    
+    // Get bins by status
+    const binsByStatus = await Bin.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get bins by type
+    const binsByType = await Bin.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: '$binType',
+          count: { $sum: 1 },
+          avgFill: { $avg: '$currentFill' },
+          avgCapacity: { $avg: '$capacity' }
+        }
+      }
+    ]);
+
+    // Get fill level distribution
+    const fillLevelDistribution = await Bin.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: {
+            $switch: {
+              branches: [
+                { case: { $lte: ['$currentFill', 20] }, then: 'Very Low (0-20%)' },
+                { case: { $lte: ['$currentFill', 40] }, then: 'Low (20-40%)' },
+                { case: { $lte: ['$currentFill', 60] }, then: 'Medium (40-60%)' },
+                { case: { $lte: ['$currentFill', 80] }, then: 'High (60-80%)' },
+                { case: { $gt: ['$currentFill', 80] }, then: 'Very High (80-100%)' }
+              ],
+              default: 'Unknown'
+            }
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get bins by district (from address)
+    const binsByDistrict = await Bin.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: {
+            $cond: {
+              if: { $regexMatch: { input: '$address', regex: /,\s*([^,]+)$/ } },
+              then: { $arrayElemAt: [{ $split: ['$address', ','] }, -1] },
+              else: 'Unknown District'
+            }
+          },
+          totalBins: { $sum: 1 },
+          avgFill: { $avg: '$currentFill' },
+          avgCapacity: { $avg: '$capacity' },
+          highFillBins: {
+            $sum: { $cond: [{ $gt: ['$currentFill', 80] }, 1, 0] }
+          },
+          lowFillBins: {
+            $sum: { $cond: [{ $lt: ['$currentFill', 20] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { avgFill: -1 } }
+    ]);
+
+    // Get recent bins (last 30 days)
+    const recentBins = await Bin.find({
+      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+    }).sort({ createdAt: -1 }).limit(10);
+
+    // Get bins needing collection (fill > 80%)
+    const binsNeedingCollection = await Bin.find({
+      currentFill: { $gt: 80 },
+      status: 'active'
+    }).countDocuments();
+
+    // Get average metrics
+    const avgMetrics = await Bin.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: null,
+          avgFill: { $avg: '$currentFill' },
+          avgCapacity: { $avg: '$capacity' },
+          avgTemperature: { $avg: '$temperature' },
+          avgHumidity: { $avg: '$humidity' }
+        }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalBins,
+          binsNeedingCollection,
+          avgFill: avgMetrics[0]?.avgFill || 0,
+          avgCapacity: avgMetrics[0]?.avgCapacity || 0,
+          avgTemperature: avgMetrics[0]?.avgTemperature || 0,
+          avgHumidity: avgMetrics[0]?.avgHumidity || 0
+        },
+        binsByStatus,
+        binsByType,
+        fillLevelDistribution,
+        binsByDistrict,
+        recentBins: recentBins.map(bin => ({
+          binId: bin.binId,
+          binType: bin.binType,
+          currentFill: bin.currentFill,
+          capacity: bin.capacity,
+          address: bin.address,
+          status: bin.status,
+          createdAt: bin.createdAt
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching bins analysis:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch bins analysis',
+      error: error.message
+    });
+  }
+};
+
 // Export analytics report
 const exportReport = async (req, res) => {
   try {
@@ -435,5 +733,8 @@ export {
   optimizeRoutes,
   applyOptimizedRoutes,
   runSimulation,
+  getDistrictAnalysis,
+  getDistrictAnalysisByUser,
+  getBinsAnalysis,
   exportReport
 };

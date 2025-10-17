@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MdDashboard,
   MdAnalytics,
@@ -7,7 +8,6 @@ import {
   MdDownload,
   MdRefresh,
   MdFilterList,
-  MdLocalShipping,
   MdAssessment,
   MdScience,
   MdWarning,
@@ -15,11 +15,11 @@ import {
   MdInfo,
   MdBarChart,
   MdLocationOn,
-  MdAttachMoney,
   MdRecycling,
   MdSettings,
   MdFileDownload,
-  MdPerson
+  MdPerson,
+  MdStorage
 } from 'react-icons/md';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useLocation } from 'react-router-dom';
@@ -35,8 +35,8 @@ import {
 const AdminAnalyticsDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const [reportType, setReportType] = useState('operational');
   const [dateRange, setDateRange] = useState('30d');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -58,10 +58,6 @@ const AdminAnalyticsDashboard = () => {
   });
 
 
-  const reportTypes = [
-    { id: 'operational', name: 'Operational', icon: <MdLocalShipping />, color: '#3b82f6' },
-    { id: 'financial', name: 'Financial', icon: <MdAttachMoney />, color: '#10b981' }
-  ];
 
   // Load initial data
   useEffect(() => {
@@ -69,7 +65,7 @@ const AdminAnalyticsDashboard = () => {
       startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       endDate: new Date().toISOString()
     });
-    // Only fetch district analysis if backend supports it
+    // Only fetch district analysis if we have user data, otherwise skip to avoid 404s
     // fetchDistrictAnalysis();
   }, []);
 
@@ -91,17 +87,21 @@ const AdminAnalyticsDashboard = () => {
       };
       
       try {
-        const data = await getDistrictAnalysis(params);
-        setDistrictAnalysisData(data);
+        const response = await getDistrictAnalysis(params);
+        if (response.success) {
+          setDistrictAnalysisData(response.data);
+        } else {
+          throw new Error(response.message || 'Failed to fetch district analysis');
+        }
       } catch (err) {
         if (err.response?.status === 404) {
           // API endpoint not available yet - use mock data
           setDistrictAnalysisData({
             districts: [
-              { name: 'North District', fillLevel: 75, totalBins: 120 },
-              { name: 'South District', fillLevel: 62, totalBins: 85 },
-              { name: 'East District', fillLevel: 48, totalBins: 95 },
-              { name: 'West District', fillLevel: 55, totalBins: 110 }
+              { district: 'North District', avgFill: 75, totalBins: 120, highFillBins: 15, lowFillBins: 8 },
+              { district: 'South District', avgFill: 62, totalBins: 85, highFillBins: 10, lowFillBins: 12 },
+              { district: 'East District', avgFill: 48, totalBins: 95, highFillBins: 5, lowFillBins: 20 },
+              { district: 'West District', avgFill: 55, totalBins: 110, highFillBins: 8, lowFillBins: 15 }
             ]
           });
         } else {
@@ -126,7 +126,7 @@ const AdminAnalyticsDashboard = () => {
   useEffect(() => {
     if (location.state?.userAnalysis) {
       setUserAnalysisData(location.state.userAnalysis);
-      setReportType('operational'); // Switch to operational tab to show user analysis
+      // User analysis data loaded
     }
   }, [location.state]);
 
@@ -170,18 +170,44 @@ const AdminAnalyticsDashboard = () => {
     } catch (err) {
       console.error('Error fetching analytics data:', err);
       setError(err.message || 'Failed to fetch analytics data');
+      
+      // Set mock data as fallback
+      if (type === 'operational') {
+        setAnalyticsData(prev => ({
+          ...prev,
+          [type]: {
+            wasteByZone: [
+              { zone: 'North Zone', waste: 45.2, percentage: 28, color: '#3b82f6' },
+              { zone: 'East Zone', waste: 38.7, percentage: 24, color: '#10b981' },
+              { zone: 'South Zone', waste: 42.1, percentage: 26, color: '#f59e0b' },
+              { zone: 'West Zone', waste: 35.8, percentage: 22, color: '#ef4444' }
+            ],
+            collectionEfficiency: 92.5,
+            averageResponseTime: 1.2,
+            systemUptime: 99.8,
+            activeRoutes: 12,
+            totalCollections: 2847,
+            completedCollections: 2634
+          }
+        }));
+      } else if (type === 'financial') {
+        setAnalyticsData(prev => ({
+          ...prev,
+          [type]: {
+            totalRevenue: 125000,
+            costRecovery: 78.5,
+            averageInvoice: 45.2,
+            outstandingPayments: 12500,
+            rebateAmount: 8500,
+            operationalCosts: 95000
+          }
+        }));
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReportTypeChange = (type) => {
-    setReportType(type);
-    fetchAnalyticsData(type, { 
-      startDate: dateRange === '30d' ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() : null,
-      endDate: new Date().toISOString()
-    });
-  };
 
 
   const handleSimulation = async () => {
@@ -223,7 +249,7 @@ const AdminAnalyticsDashboard = () => {
     try {
       setLoading(true);
       const response = await exportAnalyticsReport({
-        reportType,
+        reportType: 'operational',
         format,
         startDate: dateRange === '30d' ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() : null,
         endDate: new Date().toISOString()
@@ -233,7 +259,7 @@ const AdminAnalyticsDashboard = () => {
         // Create download link
         const link = document.createElement('a');
         link.href = response.data.downloadUrl;
-        link.download = `${reportType}_report.${format}`;
+        link.download = `operational_report.${format}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -251,48 +277,48 @@ const AdminAnalyticsDashboard = () => {
 
   const renderOperationalMetrics = () => (
     <div className="space-y-6">
-      {/* User Analysis Section */}
+      {/* Enhanced User Analysis Section */}
       {userAnalysisData && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-8 shadow-lg mb-8">
+        <div className="bg-gradient-to-r from-emerald-50/80 to-green-50/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-8 shadow-2xl mb-8">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <MdPerson className="text-white text-2xl" />
+            <div className="flex items-center space-x-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <MdPerson className="text-white text-3xl" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-green-800">User Analysis: {userAnalysisData.userName}</h3>
-                <p className="text-lg text-green-600 font-medium">Fill levels by district analysis</p>
+                <h3 className="text-3xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">User Analysis: {userAnalysisData.userName}</h3>
+                <p className="text-lg text-emerald-600 font-medium">Fill levels by district analysis</p>
               </div>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {userAnalysisData.districtAnalysis.map((districtData, index) => (
-              <div key={districtData.district} className="bg-white rounded-xl p-6 border-2 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div key={districtData.district} className="group bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-emerald-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 transform hover:-translate-y-1">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-bold text-green-800">{districtData.district}</h4>
-                  <span className="text-sm font-semibold text-green-600 bg-green-100 px-3 py-1 rounded-full">{districtData.totalBins} bins</span>
+                  <h4 className="text-xl font-bold text-emerald-800">{districtData.district}</h4>
+                  <span className="text-sm font-semibold text-emerald-600 bg-emerald-100 px-4 py-2 rounded-full shadow-lg">{districtData.totalBins} bins</span>
                 </div>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-green-700">Avg Fill Level</span>
-                    <span className="text-2xl font-bold text-green-600">{districtData.averageFill}%</span>
+                    <span className="text-sm font-medium text-emerald-700">Avg Fill Level</span>
+                    <span className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">{districtData.averageFill}%</span>
                   </div>
-                  <div className="w-full bg-green-100 rounded-full h-3">
+                  <div className="w-full bg-emerald-200 rounded-full h-4 shadow-inner">
                     <div 
-                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-emerald-500 to-green-500 h-4 rounded-full transition-all duration-700 shadow-lg"
                       style={{ width: `${districtData.averageFill}%` }}
                     ></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="text-center p-2 bg-red-50 rounded-lg">
-                      <div className="font-bold text-red-600 text-lg">
+                    <div className="text-center p-3 bg-red-50 rounded-xl border border-red-200">
+                      <div className="font-bold text-red-600 text-xl">
                         {districtData.bins.filter(bin => bin.currentFill > 80).length}
                       </div>
                       <div className="text-red-700 font-medium">High Fill</div>
                     </div>
-                    <div className="text-center p-2 bg-green-50 rounded-lg">
-                      <div className="font-bold text-green-600 text-lg">
+                    <div className="text-center p-3 bg-green-50 rounded-xl border border-green-200">
+                      <div className="font-bold text-green-600 text-xl">
                         {districtData.bins.filter(bin => bin.currentFill < 20).length}
                       </div>
                       <div className="text-green-700 font-medium">Low Fill</div>
@@ -305,62 +331,62 @@ const AdminAnalyticsDashboard = () => {
         </div>
       )}
 
-      {/* District Analysis Summary */}
+      {/* Enhanced District Analysis Summary */}
       {getDistrictData().length > 0 && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-8 mb-8 shadow-lg">
+        <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm border border-blue-200/50 rounded-3xl p-8 mb-8 shadow-2xl">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <MdLocationOn className="text-white text-2xl" />
+            <div className="flex items-center space-x-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <MdLocationOn className="text-white text-3xl" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-green-800">District Analysis Summary</h3>
-                <p className="text-lg text-green-600 font-medium">
+                <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-800 to-indigo-800 bg-clip-text text-transparent">District Analysis Summary</h3>
+                <p className="text-lg text-blue-600 font-medium">
                   Fill levels by district {userAnalysisData?.userName ? `- ${userAnalysisData.userName}` : '(System-wide)'}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-6">
-              <div className="text-center p-4 bg-white rounded-xl border-2 border-green-200">
-                <div className="text-3xl font-bold text-green-600">{getDistrictData().length}</div>
-                <div className="text-sm font-semibold text-green-700">Districts</div>
+              <div className="text-center p-6 bg-white/90 backdrop-blur-sm rounded-2xl border border-blue-200/50 shadow-xl">
+                <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{getDistrictData().length}</div>
+                <div className="text-sm font-semibold text-blue-700">Districts</div>
               </div>
-              <div className="text-center p-4 bg-white rounded-xl border-2 border-green-200">
-                <div className="text-3xl font-bold text-emerald-600">
+              <div className="text-center p-6 bg-white/90 backdrop-blur-sm rounded-2xl border border-blue-200/50 shadow-xl">
+                <div className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                   {getDistrictData()[0]?.averageFill || getDistrictData()[0]?.avgFill}%
                 </div>
-                <div className="text-sm font-semibold text-emerald-700">Highest Fill</div>
+                <div className="text-sm font-semibold text-indigo-700">Highest Fill</div>
               </div>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {getDistrictData().slice(0, 3).map((districtData, index) => (
-              <div key={districtData.district} className="bg-white rounded-xl p-6 border-2 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div key={districtData.district} className="group bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-blue-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 transform hover:-translate-y-1">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-bold text-green-800">{districtData.district}</h4>
-                  <span className="text-sm font-semibold text-green-600 bg-green-100 px-3 py-1 rounded-full">{districtData.totalBins || districtData.binCount} bins</span>
+                  <h4 className="text-xl font-bold text-blue-800">{districtData.district}</h4>
+                  <span className="text-sm font-semibold text-blue-600 bg-blue-100 px-4 py-2 rounded-full shadow-lg">{districtData.totalBins || districtData.binCount} bins</span>
                 </div>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-green-700">Avg Fill</span>
-                    <span className="text-2xl font-bold text-green-600">{districtData.averageFill || districtData.avgFill}%</span>
+                    <span className="text-sm font-medium text-blue-700">Avg Fill</span>
+                    <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{districtData.averageFill || districtData.avgFill}%</span>
                   </div>
-                  <div className="w-full bg-green-100 rounded-full h-3">
+                  <div className="w-full bg-blue-200 rounded-full h-4 shadow-inner">
                     <div 
-                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 h-4 rounded-full transition-all duration-700 shadow-lg"
                       style={{ width: `${districtData.averageFill || districtData.avgFill}%` }}
                     ></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="text-center p-2 bg-red-50 rounded-lg">
-                      <div className="font-bold text-red-600 text-lg">
+                    <div className="text-center p-3 bg-red-50 rounded-xl border border-red-200">
+                      <div className="font-bold text-red-600 text-xl">
                         {districtData.bins ? districtData.bins.filter(bin => bin.currentFill > 80).length : districtData.highFillBins || 0}
                       </div>
                       <div className="text-red-700 font-medium">High Fill</div>
                     </div>
-                    <div className="text-center p-2 bg-green-50 rounded-lg">
-                      <div className="font-bold text-green-600 text-lg">
+                    <div className="text-center p-3 bg-green-50 rounded-xl border border-green-200">
+                      <div className="font-bold text-green-600 text-xl">
                         {districtData.bins ? districtData.bins.filter(bin => bin.currentFill < 20).length : districtData.lowFillBins || 0}
                       </div>
                       <div className="text-green-700 font-medium">Low Fill</div>
@@ -373,35 +399,35 @@ const AdminAnalyticsDashboard = () => {
         </div>
       )}
 
-      {/* District Analysis Bar Chart */}
+      {/* Enhanced District Analysis Bar Chart */}
       {getDistrictData().length > 0 && (
-        <div className="bg-white rounded-2xl border-2 border-green-200 p-8 mb-8 shadow-lg">
+        <div className="bg-white/80 backdrop-blur-sm border border-purple-200/50 rounded-3xl p-8 mb-8 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <MdBarChart className="text-white text-2xl" />
+            <div className="flex items-center space-x-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <MdBarChart className="text-white text-3xl" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-green-800">District Fill Level Bar Chart</h3>
-                <p className="text-lg text-green-600 font-medium">Visual representation of fill levels by district</p>
+                <h3 className="text-3xl font-bold bg-gradient-to-r from-purple-800 to-pink-800 bg-clip-text text-transparent">District Fill Level Bar Chart</h3>
+                <p className="text-lg text-purple-600 font-medium">Visual representation of fill levels by district</p>
               </div>
             </div>
             <div className="flex items-center space-x-4 text-sm font-medium">
-              <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
-                <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                <span className="text-red-700">High (&gt;80%)</span>
+              <div className="flex items-center space-x-2 bg-red-50 px-4 py-3 rounded-xl border border-red-200">
+                <div className="w-5 h-5 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg"></div>
+                <span className="text-red-700 font-semibold">High (&gt;80%)</span>
               </div>
-              <div className="flex items-center space-x-2 bg-orange-50 px-3 py-2 rounded-lg">
-                <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                <span className="text-orange-700">Medium (60-80%)</span>
+              <div className="flex items-center space-x-2 bg-orange-50 px-4 py-3 rounded-xl border border-orange-200">
+                <div className="w-5 h-5 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full shadow-lg"></div>
+                <span className="text-orange-700 font-semibold">Medium (60-80%)</span>
               </div>
-              <div className="flex items-center space-x-2 bg-blue-50 px-3 py-2 rounded-lg">
-                <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                <span className="text-blue-700">Low (40-60%)</span>
+              <div className="flex items-center space-x-2 bg-blue-50 px-4 py-3 rounded-xl border border-blue-200">
+                <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg"></div>
+                <span className="text-blue-700 font-semibold">Low (40-60%)</span>
               </div>
-              <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg">
-                <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                <span className="text-green-700">Very Low (&lt;40%)</span>
+              <div className="flex items-center space-x-2 bg-green-50 px-4 py-3 rounded-xl border border-green-200">
+                <div className="w-5 h-5 bg-gradient-to-r from-green-500 to-green-600 rounded-full shadow-lg"></div>
+                <span className="text-green-700 font-semibold">Very Low (&lt;40%)</span>
               </div>
             </div>
           </div>
@@ -433,11 +459,11 @@ const AdminAnalyticsDashboard = () => {
                           {fillLevel}%
                         </span>
                       </div>
-                    </div>
+            </div>
                     <div className="absolute -bottom-8 left-0 text-sm font-semibold text-green-600">
                       {districtData.totalBins || districtData.binCount} bins
-                    </div>
-                  </div>
+            </div>
+            </div>
                   <div className="w-20 text-right">
                     <div className="text-lg font-bold text-green-800">{fillLevel}%</div>
                     <div className="text-sm font-medium text-green-600">
@@ -445,171 +471,45 @@ const AdminAnalyticsDashboard = () => {
                         `${districtData.bins.filter(bin => bin.currentFill > 80).length}H / ${districtData.bins.filter(bin => bin.currentFill < 20).length}L` :
                         `${districtData.highFillBins || 0}H / ${districtData.lowFillBins || 0}L`
                       }
-                    </div>
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
               );
             })}
           </div>
         </div>
       )}
-
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* District Analysis Section */}
-        <div className="bg-white rounded-2xl border-2 border-green-200 p-8 shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-green-800">District Fill Level Analysis</h3>
-            <button className="p-3 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-xl transition-all duration-300 border-2 border-green-200 hover:border-green-300">
-              <MdFilterList className="text-xl" />
-            </button>
-          </div>
-        <div className="space-y-6">
-            {getDistrictData().length > 0 ? (
-              getDistrictData().map((districtData) => (
-                <div key={districtData.district || `district-${districtData.id}`} className="p-4 bg-green-50 rounded-xl border-2 border-green-100">
-              <div className="flex justify-between items-center mb-3">
-                    <span className="text-lg font-bold text-green-800">{districtData.district}</span>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl font-bold text-green-600">{districtData.averageFill || districtData.avgFill}%</span>
-                      <span className="text-sm font-semibold text-green-600 bg-green-100 px-3 py-1 rounded-full">({districtData.totalBins || districtData.binCount} bins)</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-green-100 rounded-full h-3 mb-3">
-                    <div 
-                      className="h-3 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${districtData.averageFill || districtData.avgFill}%`,
-                        backgroundColor: (districtData.averageFill || districtData.avgFill) > 80 ? '#ef4444' : 
-                                     (districtData.averageFill || districtData.avgFill) > 60 ? '#f59e0b' : 
-                                     (districtData.averageFill || districtData.avgFill) > 40 ? '#3b82f6' : '#10b981'
-                      }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-sm font-medium">
-                    <span className="text-red-600">High Fill: {districtData.bins ? districtData.bins.filter(bin => bin.currentFill > 80).length : districtData.highFillBins || 0}</span>
-                    <span className="text-green-600">Low Fill: {districtData.bins ? districtData.bins.filter(bin => bin.currentFill < 20).length : districtData.lowFillBins || 0}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-            <div className="text-center py-12">
-                {districtLoading ? (
-                  <div className="flex flex-col items-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-200 border-t-green-600 mb-6"></div>
-                    <div className="text-xl mb-3 font-semibold text-green-700">Loading district analysis...</div>
-                    <div className="text-lg text-green-600">Fetching data from backend</div>
-                  </div>
-                ) : districtError ? (
-                  <div>
-                    <div className="text-xl mb-3 font-bold text-red-600">Error loading district analysis</div>
-                    <div className="text-lg text-red-500 mb-6">{districtError}</div>
-                    <button 
-                      type="button"
-                      onClick={fetchDistrictAnalysis}
-                      className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-xl mb-3 font-bold text-green-600">No district analysis available</div>
-                    <div className="text-lg mb-6 text-green-500">Export user analysis from User Analytics page or try backend data</div>
-                    <button 
-                      type="button"
-                      onClick={fetchDistrictAnalysis}
-                      className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
-                    >
-                      Try Backend Data
-                    </button>
-                  </div>
-                )}
-              </div>
-          )}
-        </div>
-      </div>
-
-
-      </div>
     </div>
   );
 
-  const renderFinancialMetrics = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Revenue Overview */}
-      <div className="bg-white rounded-2xl border-2 border-green-200 p-8 shadow-lg">
-        <h3 className="text-2xl font-bold text-green-800 mb-6">Revenue Overview</h3>
-        <div className="space-y-6">
-          <div className="flex justify-between items-center p-6 bg-green-50 rounded-xl border-2 border-green-200">
-            <span className="text-lg font-semibold text-green-800">Total Revenue</span>
-            <span className="text-2xl font-bold text-green-900">${analyticsData.financial?.totalRevenue?.toLocaleString() || 0}</span>
-          </div>
-          <div className="flex justify-between items-center p-6 bg-blue-50 rounded-xl border-2 border-blue-200">
-            <span className="text-lg font-semibold text-blue-800">Cost Recovery</span>
-            <span className="text-2xl font-bold text-blue-900">{analyticsData.financial?.costRecovery || 0}%</span>
-          </div>
-          <div className="flex justify-between items-center p-6 bg-yellow-50 rounded-xl border-2 border-yellow-200">
-            <span className="text-lg font-semibold text-yellow-800">Avg Invoice</span>
-            <span className="text-2xl font-bold text-yellow-900">${analyticsData.financial?.averageInvoice || 0}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Cost Analysis */}
-      <div className="bg-white rounded-2xl border-2 border-green-200 p-8 shadow-lg">
-        <h3 className="text-2xl font-bold text-green-800 mb-6">Cost Analysis</h3>
-        <div className="space-y-6">
-          <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
-            <span className="text-lg font-semibold text-gray-700">Operational Costs</span>
-            <span className="text-xl font-bold text-gray-900">${analyticsData.financial?.operationalCosts?.toLocaleString() || 0}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 bg-red-50 rounded-xl border-2 border-red-200">
-            <span className="text-lg font-semibold text-red-700">Outstanding Payments</span>
-            <span className="text-xl font-bold text-red-600">${analyticsData.financial?.outstandingPayments?.toLocaleString() || 0}</span>
-          </div>
-          <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl border-2 border-green-200">
-            <span className="text-lg font-semibold text-green-700">Rebate Amount</span>
-            <span className="text-xl font-bold text-green-600">${analyticsData.financial?.rebateAmount?.toLocaleString() || 0}</span>
-          </div>
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-lg font-semibold text-green-700">Cost Recovery Progress</span>
-              <span className="text-xl font-bold text-green-600">{analyticsData.financial?.costRecovery || 0}%</span>
-            </div>
-            <div className="w-full bg-green-100 rounded-full h-4">
-              <div 
-                className="bg-gradient-to-r from-green-500 to-emerald-500 h-4 rounded-full transition-all duration-500"
-                style={{ width: `${analyticsData.financial?.costRecovery || 0}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
 
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden">
-      {/* Subtle Background Pattern */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none z-0"
-           style={{
-             backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)',
-             backgroundSize: '40px 40px'
-           }}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 relative overflow-hidden">
+      {/* Enhanced Background Pattern */}
+      <div 
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle at 25px 25px, #059669 2px, transparent 0), radial-gradient(circle at 75px 75px, #10b981 2px, transparent 0)`,
+          backgroundSize: '100px 100px'
+        }}
+      ></div>
+      
+      {/* Floating Elements */}
+      <div className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-br from-emerald-200/20 to-green-200/20 rounded-full blur-xl"></div>
+      <div className="absolute bottom-20 left-20 w-40 h-40 bg-gradient-to-br from-blue-200/20 to-emerald-200/20 rounded-full blur-xl"></div>
 
       <div className="relative z-10 p-8 max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Enhanced Header */}
         <div className="mb-10 w-full">
-          <div className="bg-white border-2 border-green-200 rounded-2xl p-8 shadow-lg">
+          <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-8 shadow-2xl">
             <div className="flex justify-between items-center flex-wrap gap-6">
               <div>
-                <h1 className="text-5xl font-bold text-green-800 mb-3 tracking-tight">
+                <h1 className="text-5xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent mb-3 tracking-tight">
                   Analytics Dashboard
                 </h1>
-                <p className="text-green-600 text-xl font-medium">
+                <p className="text-emerald-600 text-xl font-medium">
                   Comprehensive insights for waste management operations
                 </p>
               </div>
@@ -617,85 +517,94 @@ const AdminAnalyticsDashboard = () => {
               <div className="flex gap-4">
                 <button 
                   type="button"
-                  onClick={() => handleExportReport('PDF')}
-                  className="flex items-center space-x-3 bg-green-600 text-white px-8 py-4 rounded-xl hover:bg-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105"
+                  onClick={() => navigate('/admin/bins-analysis')}
+                  className="group flex items-center space-x-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
                 >
-                  <MdFileDownload className="text-xl" />
+                  <MdStorage className="text-xl group-hover:animate-pulse" />
+                  <span>View Overview</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    fetchAnalyticsData('operational', { 
+                      startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                      endDate: new Date().toISOString()
+                    });
+                    fetchDistrictAnalysis();
+                  }}
+                  disabled={loading}
+                  className="group flex items-center space-x-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
+                >
+                  <MdRefresh className={`text-xl ${loading ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
+                  <span>{loading ? 'Refreshing...' : 'Refresh Data'}</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => handleExportReport('PDF')}
+                  className="group flex items-center space-x-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-4 rounded-2xl hover:from-emerald-700 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
+                >
+                  <MdFileDownload className="text-xl group-hover:animate-pulse" />
                   <span>Export Report</span>
                 </button>
                 <button 
                   type="button" 
-                  className="relative bg-white border-2 border-green-300 p-4 rounded-xl hover:bg-green-50 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                  className="group relative bg-white/90 backdrop-blur-sm border-2 border-emerald-300 p-4 rounded-2xl hover:bg-emerald-50 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-0.5"
                 >
-                  <MdSettings className="text-green-600 text-xl" />
+                  <MdSettings className="text-emerald-600 text-xl group-hover:animate-spin" />
                 </button>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Report Type Selection */}
-        <div className="bg-white rounded-2xl border-2 border-green-200 shadow-lg mb-8 overflow-hidden">
-          <div className="border-b-2 border-green-100">
-            <div className="flex">
-              {reportTypes.map((type) => (
-                <button
-                  type="button"
-                  key={type.id}
-                  onClick={() => handleReportTypeChange(type.id)}
-                  className={`flex items-center space-x-3 px-8 py-6 text-lg font-bold transition-all duration-300 border-b-4 ${
-                    reportType === type.id
-                      ? 'text-green-800 border-green-500 bg-green-50 shadow-lg'
-                      : 'text-green-600 border-transparent hover:text-green-800 hover:bg-green-50 hover:border-green-300'
-                  }`}
-                >
-                  <span className="text-2xl">{type.icon}</span>
-                  <span>{type.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
           
-          {/* Tab Content */}
-          <div className="p-8">
-            {loading && (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex items-center space-x-4">
-                  <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
-                  <span className="text-green-700 font-semibold text-lg">Loading analytics data...</span>
+        {/* Enhanced Content */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-12 shadow-2xl">
+              <div className="flex items-center space-x-6">
+                <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">Loading Analytics Data</h3>
+                  <p className="text-emerald-600 text-lg">Fetching comprehensive insights...</p>
                 </div>
               </div>
-            )}
-
-            {!loading && analyticsData[reportType] && (
-              <>
-                {reportType === 'operational' && renderOperationalMetrics()}
-                {reportType === 'financial' && renderFinancialMetrics()}
-              </>
-            )}
-            
-            {!loading && !analyticsData[reportType] && (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="text-green-600 text-xl mb-3 font-semibold">No data available</div>
-                  <div className="text-green-500 text-lg">Data will be loaded when you select a report type</div>
-                </div>
+              <div className="mt-6 w-64 h-2 bg-emerald-200 rounded-full">
+                <div className="w-48 h-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full animate-pulse"></div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {!loading && analyticsData.operational && (
+          <>
+            {renderOperationalMetrics()}
+          </>
+        )}
+        
+        {!loading && !analyticsData.operational && (
+          <div className="flex items-center justify-center py-16">
+            <div className="bg-white/80 backdrop-blur-sm border border-emerald-200/50 rounded-3xl p-12 shadow-2xl text-center">
+              <div className="text-emerald-500 text-6xl mb-6">📊</div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent mb-4">No Data Available</h3>
+              <p className="text-emerald-600 text-lg">Data will be loaded when you refresh or select a report type</p>
+              <div className="mt-6 w-48 h-2 bg-emerald-200 rounded-full mx-auto">
+                <div className="w-24 h-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        )}
 
 
-        {/* Simulation Mode Indicator */}
+        {/* Enhanced Simulation Mode Indicator */}
         {simulationMode && (
-          <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-6 mb-8 shadow-lg">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <MdScience className="text-green-600 text-2xl" />
+          <div className="bg-gradient-to-r from-emerald-50/80 to-green-50/80 backdrop-blur-sm border border-emerald-300/50 rounded-3xl p-6 mb-8 shadow-2xl">
+            <div className="flex items-center space-x-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <MdScience className="text-white text-3xl" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-green-800">What-if Simulation Active</h3>
-                <p className="text-lg text-green-700 font-medium">You are viewing projected metrics under modified pricing policies.</p>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-800 to-green-800 bg-clip-text text-transparent">What-if Simulation Active</h3>
+                <p className="text-lg text-emerald-700 font-medium">You are viewing projected metrics under modified pricing policies.</p>
               </div>
             </div>
           </div>
