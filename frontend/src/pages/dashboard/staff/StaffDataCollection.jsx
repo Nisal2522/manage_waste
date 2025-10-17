@@ -203,6 +203,10 @@ const StaffDataCollection = () => {
                   <option value="paper">Paper</option>
                   <option value="glass">Glass</option>
                   <option value="mixed">Mixed</option>
+                  <option value="medical waste">Medical Waste</option>
+                  <option value="hazardous">Hazardous</option>
+                  <option value="electronic">Electronic</option>
+                  <option value="construction">Construction</option>
                 </select>
               </div>
 

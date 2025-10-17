@@ -12,6 +12,7 @@ import analyticsRoutes from './routes/analytics.js';
 import testAnalyticsRoutes from './routes/testAnalytics.js';
 import userStatsRoutes from './routes/userStats.js';
 import collectionRoutes from './routes/collections.js';
+import qrRoutes from './routes/qr.js';
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/test-analytics', testAnalyticsRoutes);
 app.use('/api/user-stats', userStatsRoutes);
 app.use('/api/collections', collectionRoutes);
+app.use('/api/qr', qrRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

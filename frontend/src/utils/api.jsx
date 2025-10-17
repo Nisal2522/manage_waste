@@ -266,7 +266,7 @@ export const uploadFile = async (file, type = 'image') => {
 
 // QR Code API
 export const generateQRCode = async (data) => {
-  const response = await api.post('/qr/generate', { data });
+  const response = await api.post('/qr/generate', data);
   return response.data;
 };
 

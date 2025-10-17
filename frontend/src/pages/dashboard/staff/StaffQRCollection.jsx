@@ -16,8 +16,8 @@ import {
 } from 'react-icons/md';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import QRScanner from '../../../components/common/QRScanner.jsx';
-import { scanQRCode, createCollection, getBins } from '../../../utils/api.jsx';
+import SimpleQRScanner from '../../../components/common/SimpleQRScanner.jsx';
+import { scanQRCode, updateBinFillLevel, getBins, createCollection } from '../../../utils/api.jsx';
 
 const StaffQRCollection = () => {
   const { user } = useAuth();
@@ -29,14 +29,26 @@ const StaffQRCollection = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
-  // Collection form data - simplified to only weight and collection marking
+  // Collection form data
   const [collectionData, setCollectionData] = useState({
+    wasteType: 'organic',
     weight: '',
-    isCollected: false
+    notes: '',
+    collectionTime: new Date().toISOString().slice(0, 16) // Format for datetime-local input
   });
 
+  const wasteTypes = [
+    { value: 'organic', label: 'Organic Waste', color: '#10b981' },
+    { value: 'plastic', label: 'Plastic Waste', color: '#3b82f6' },
+    { value: 'paper', label: 'Paper Waste', color: '#f59e0b' },
+    { value: 'glass', label: 'Glass Waste', color: '#8b5cf6' },
+    { value: 'mixed', label: 'Mixed Waste', color: '#6b7280' },
+    { value: 'medical waste', label: 'Medical Waste', color: '#ef4444' },
+    { value: 'hazardous', label: 'Hazardous Waste', color: '#dc2626' },
+    { value: 'electronic', label: 'Electronic Waste', color: '#7c3aed' },
+    { value: 'construction', label: 'Construction Waste', color: '#92400e' }
+  ];
 
   // Auto-load bin data if binId is provided in URL
   useEffect(() => {
@@ -64,11 +76,12 @@ const StaffQRCollection = () => {
           setScannedBin(bin);
           setSuccess('Bin loaded successfully from QR code!');
           
-          // Reset collection data for new bin
-          setCollectionData({
-            weight: '',
-            isCollected: false
-          });
+          // Pre-fill collection data with bin information
+          setCollectionData(prev => ({
+            ...prev,
+            wasteType: bin.binType?.toLowerCase() || 'organic',
+            collectionTime: new Date().toISOString().slice(0, 16)
+          }));
         } else {
           throw new Error('Bin not found with the provided ID');
         }
@@ -83,6 +96,47 @@ const StaffQRCollection = () => {
     }
   };
 
+  const handleAutoSubmit = async (binId) => {
+    try {
+      console.log('Auto-submitting collection for bin:', binId);
+      
+      // Create collection payload with default values
+      const collectionPayload = {
+        binId: binId,
+        wasteType: 'organic', // Default waste type
+        weight: 0, // Default weight
+        collectionTime: new Date().toISOString(),
+        notes: 'Auto-collected via QR code scan',
+        collectedBy: user?.userId || user?.id,
+        residentId: scannedBin?.userId?._id || scannedBin?.userId
+      };
+
+      console.log('Auto-submitting collection data:', collectionPayload);
+
+      const response = await createCollection(collectionPayload);
+      
+      if (response && response.success) {
+        setSuccess('Bin automatically collected via QR code scan! Fill level reset to 0%.');
+        
+        // Reset form and scanned bin
+        setTimeout(() => {
+          setScannedBin(null);
+          setCollectionData({
+            wasteType: 'organic',
+            weight: '',
+            collectionTime: new Date().toISOString().slice(0, 16),
+            notes: ''
+          });
+        }, 2000);
+      } else {
+        throw new Error(response?.message || 'Failed to auto-submit collection');
+      }
+    } catch (error) {
+      console.error('Error auto-submitting collection:', error);
+      setError('Auto-collection failed: ' + (error.message || 'Unknown error'));
+    }
+  };
+
   const handleQRScan = async (qrData) => {
     setScannerOpen(false);
     setLoading(true);
@@ -91,15 +145,32 @@ const StaffQRCollection = () => {
 
     try {
       console.log('QR Code scanned:', qrData);
+      console.log('QR Data type:', typeof qrData);
+      console.log('QR Data length:', qrData?.length);
       
-      // Check if QR code is a URL
-      if (qrData.startsWith('http')) {
-        console.log('Processing URL QR code:', qrData);
-        // Extract binId from URL
+      // Check if QR code is a collection URL with auto-submit
+      if (qrData.includes('/staff/collect?binId=')) {
         const url = new URL(qrData);
         const binId = url.searchParams.get('binId');
+        const autoSubmit = url.searchParams.get('autoSubmit');
         
-        console.log('Extracted binId from URL:', binId);
+        if (binId) {
+          // Load bin by binId
+          await loadBinByBinId(binId);
+          
+          // If autoSubmit is true, automatically submit collection
+          if (autoSubmit === 'true') {
+            console.log('Auto-submitting collection for bin:', binId);
+            await handleAutoSubmit(binId);
+          }
+          return;
+        } else {
+          throw new Error('Invalid QR code URL - no binId found');
+        }
+      } else if (qrData.startsWith('http')) {
+        // Handle other HTTP URLs
+        const url = new URL(qrData);
+        const binId = url.searchParams.get('binId');
         
         if (binId) {
           // Load bin by binId
@@ -109,43 +180,29 @@ const StaffQRCollection = () => {
           throw new Error('Invalid QR code URL - no binId found');
         }
       } else {
-        // Check if QR code is JSON data
-        try {
-          const qrJson = JSON.parse(qrData);
-          console.log('Processing JSON QR code:', qrJson);
-          
-          if (qrJson.binId) {
-            // Load bin by binId from JSON
-            await loadBinByBinId(qrJson.binId);
-            return;
-          } else if (qrJson.url) {
-            // Extract binId from URL in JSON
-            const url = new URL(qrJson.url);
-            const binId = url.searchParams.get('binId') || url.pathname.split('/').pop();
-            
-            console.log('Extracted binId from JSON URL:', binId);
-            
-            if (binId) {
-              await loadBinByBinId(binId);
-              return;
-            }
-          }
-        } catch (jsonError) {
-          console.log('Not JSON data, trying as direct binId or legacy format');
-        }
-        
-        // Handle legacy QR codes (direct binId or other formats)
+        // Handle legacy QR codes (direct binId or JSON data)
+        console.log('Calling scanQRCode API with data:', qrData);
         const response = await scanQRCode(qrData);
+        console.log('scanQRCode API response:', response);
         
         if (response && response.success) {
-          setScannedBin(response.data);
-          setSuccess('Bin found successfully!');
+          // The backend returns bin data nested under 'data.bin'
+          const binData = response.data.bin || response.data;
+          console.log('Extracted bin data:', binData);
           
-          // Reset collection data for new bin
-          setCollectionData({
-            weight: '',
-            isCollected: false
-          });
+          if (binData) {
+            setScannedBin(binData);
+            setSuccess('Bin found successfully!');
+            
+            // Pre-fill collection data with bin information
+            setCollectionData(prev => ({
+              ...prev,
+              wasteType: binData.binType?.toLowerCase() || 'organic',
+              collectionTime: new Date().toISOString().slice(0, 16)
+            }));
+          } else {
+            throw new Error('Bin data not found in response');
+          }
         } else {
           throw new Error(response?.message || 'Bin not found');
         }
@@ -172,14 +229,8 @@ const StaffQRCollection = () => {
       return;
     }
 
-    // Validate required fields
-    if (!collectionData.weight || collectionData.weight.trim() === '') {
-      setError('Please enter the weight of the collected waste');
-      return;
-    }
-
-    if (!collectionData.isCollected) {
-      setError('Please mark the bin as collected');
+    if (!collectionData.weight || collectionData.weight <= 0) {
+      setError('Please enter a valid weight');
       return;
     }
 
@@ -188,49 +239,38 @@ const StaffQRCollection = () => {
 
     try {
       const collectionPayload = {
-        bin: scannedBin._id, // Backend expects 'bin' not 'binId'
-        staff: user._id, // Backend expects 'staff' not 'staffId'
-        resident: scannedBin.userId?._id || scannedBin.userId, // Backend expects 'resident' not 'residentId'
+        binId: scannedBin._id,
+        binQRCode: scannedBin.binId,
+        wasteType: collectionData.wasteType,
         weight: parseFloat(collectionData.weight),
-        isCollected: collectionData.isCollected
+        notes: collectionData.notes,
+        collectionTime: new Date(collectionData.collectionTime).toISOString(),
+        residentId: scannedBin.userId?._id || scannedBin.userId
       };
 
       console.log('Submitting collection data:', collectionPayload);
-      console.log('API Base URL:', process.env.REACT_APP_API_URL || 'http://localhost:5000/api');
-      console.log('User token:', localStorage.getItem('token'));
-      console.log('User data:', user);
 
       const response = await createCollection(collectionPayload);
       
-      console.log('API Response:', response);
-      
       if (response && response.success) {
-        console.log('Collection saved successfully to database');
-        console.log('Bin fill level automatically reset to 0% by backend');
+        setSuccess('Bin marked as collected successfully! Fill level reset to 0%.');
         
-        setShowSuccessModal(true);
-        setSuccess(null); // Clear the bin loaded success message
-        
-        // Reset form and scanned bin after showing success modal
+        // Reset form and scanned bin
         setTimeout(() => {
           setScannedBin(null);
           setCollectionData({
+            wasteType: 'organic',
             weight: '',
-            isCollected: false
+            notes: '',
+            collectionTime: new Date().toISOString().slice(0, 16)
           });
-          setShowSuccessModal(false);
+          setSuccess(null);
         }, 3000);
       } else {
-        console.error('API call failed:', response);
         throw new Error(response?.message || 'Failed to mark bin as collected');
       }
     } catch (error) {
       console.error('Error marking bin as collected:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       setError(error.message || 'Failed to mark bin as collected. Please try again.');
     } finally {
       setSubmitting(false);
@@ -240,14 +280,24 @@ const StaffQRCollection = () => {
   const handleReset = () => {
     setScannedBin(null);
     setCollectionData({
+      wasteType: 'organic',
       weight: '',
-      isCollected: false
+      notes: '',
+      collectionTime: new Date().toISOString().slice(0, 16)
     });
     setError(null);
     setSuccess(null);
-    setShowSuccessModal(false);
   };
 
+  const getWasteTypeColor = (type) => {
+    const wasteType = wasteTypes.find(wt => wt.value === type);
+    return wasteType ? wasteType.color : '#6b7280';
+  };
+
+  const getWasteTypeLabel = (type) => {
+    const wasteType = wasteTypes.find(wt => wt.value === type);
+    return wasteType ? wasteType.label : 'Unknown';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative overflow-hidden">
@@ -264,10 +314,10 @@ const StaffQRCollection = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => navigate('/dashboard/staff')}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
                 <MdArrowBack className="text-xl" />
-                <span className="font-medium">Back to Dashboard</span>
+                <span>Back to Dashboard</span>
               </button>
             </div>
           </div>
@@ -370,12 +420,13 @@ const StaffQRCollection = () => {
                 {/* Bin Type */}
                 <div className="flex items-center space-x-3">
                   <div 
-                    className="w-6 h-6 rounded-full bg-blue-500"
+                    className="w-6 h-6 rounded-full"
+                    style={{ backgroundColor: getWasteTypeColor(scannedBin.binType?.toLowerCase()) }}
                   ></div>
                   <div>
                     <div className="text-sm font-medium text-gray-600">Bin Type</div>
                     <div className="text-lg font-semibold text-gray-800">
-                      {scannedBin.binType || 'General Waste'}
+                      {getWasteTypeLabel(scannedBin.binType?.toLowerCase())}
                     </div>
                   </div>
                 </div>
@@ -431,14 +482,32 @@ const StaffQRCollection = () => {
           )}
         </div>
 
-        {/* Collection Form - Simplified */}
+        {/* Collection Form */}
         {scannedBin && (
           <div className="mt-8 bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">
               Collection Details
             </h2>
             
-            <div className="max-w-md mx-auto space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Waste Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Waste Type
+                </label>
+                <select
+                  value={collectionData.wasteType}
+                  onChange={handleInputChange('wasteType')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                >
+                  {wasteTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Weight */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -451,26 +520,35 @@ const StaffQRCollection = () => {
                   placeholder="Enter weight in kg"
                   min="0"
                   step="0.1"
-                  required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
               </div>
 
-              {/* Collection Confirmation */}
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="isCollected"
-                  checked={collectionData.isCollected}
-                  onChange={(e) => setCollectionData(prev => ({
-                    ...prev,
-                    isCollected: e.target.checked
-                  }))}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="isCollected" className="text-sm font-semibold text-gray-700">
-                  Mark bin as collected *
+              {/* Collection Time */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Collection Time
                 </label>
+                <input
+                  type="datetime-local"
+                  value={collectionData.collectionTime}
+                  onChange={handleInputChange('collectionTime')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={collectionData.notes}
+                  onChange={handleInputChange('notes')}
+                  placeholder="Add any notes about the collection..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+                />
               </div>
             </div>
 
@@ -487,7 +565,7 @@ const StaffQRCollection = () => {
               
               <button
                 onClick={handleMarkAsCollected}
-                disabled={submitting}
+                disabled={submitting || !collectionData.weight}
                 className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? (
@@ -520,34 +598,8 @@ const StaffQRCollection = () => {
           </div>
         )}
 
-        {/* Success Modal */}
-        {showSuccessModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <MdCheckCircle className="text-green-600 text-4xl" />
-                </div>
-                
-                <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                  Collection Saved Successfully!
-                </h3>
-                
-                <p className="text-gray-600 mb-6">
-                  The collection data has been saved to the database. The bin has been marked as collected and the fill level has been reset to 0%.
-                </p>
-                
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span>Redirecting back to scanner...</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* QR Scanner Modal */}
-        <QRScanner
+        <SimpleQRScanner
           open={scannerOpen}
           onClose={() => setScannerOpen(false)}
           onScan={handleQRScan}

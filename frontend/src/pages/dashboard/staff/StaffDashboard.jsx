@@ -41,9 +41,9 @@ import {
   Add,
   MoreVert,
   Directions,
-  Assignment,
-  QrCodeScanner
+  Assignment
 } from '@mui/icons-material';
+import QRGenerator from '../../../components/common/QRGenerator';
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -103,34 +103,19 @@ const StaffDashboard = () => {
                 Manage your collection routes and track your daily performance.
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="contained"
-                startIcon={<Assignment />}
-                onClick={() => navigate('/staff/data-collection')}
-                sx={{
-                  background: 'linear-gradient(45deg, #10b981, #059669)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #059669, #047857)'
-                  }
-                }}
-              >
-                Data Collection
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<QrCodeScanner />}
-                onClick={() => navigate('/staff/qr-collection')}
-                sx={{
-                  background: 'linear-gradient(45deg, #3b82f6, #2563eb)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #2563eb, #1d4ed8)'
-                  }
-                }}
-              >
-                QR Collection
-              </Button>
-            </Box>
+            <Button
+              variant="contained"
+              startIcon={<Assignment />}
+              onClick={() => navigate('/staff/data-collection')}
+              sx={{
+                background: 'linear-gradient(45deg, #10b981, #059669)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #059669, #047857)'
+                }
+              }}
+            >
+              Data Collection
+            </Button>
           </Box>
         </Box>
 
@@ -394,6 +379,23 @@ const StaffDashboard = () => {
                     </Button>
                   </Grid>
                 </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* QR Code Card */}
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardHeader title="Staff QR" sx={{ pb: 1 }} />
+              <Divider />
+              <CardContent>
+                {/* Example QR value: staff profile or route check-in URL */}
+                <QRGenerator
+                  value={window.location.origin + '/staff/profile'}
+                  size={180}
+                  title="Staff Profile QR"
+                  showControls={false}
+                />
               </CardContent>
             </Card>
           </Grid>

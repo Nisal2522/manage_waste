@@ -15,8 +15,7 @@ import {
 } from 'react-icons/md';
 import { FaEye } from 'react-icons/fa';
 import { useAuth } from '../../../context/AuthContext.jsx';
-import { getBinRequestsByUser, createBin, getBinsByUser, updateBinFillLevel, deleteBin } from '../../../utils/api.jsx';
-import QRGenerator from '../../../components/common/QRGenerator';
+import { getBinRequestsByUser, createBin, getBinsByUser, updateBinFillLevel, deleteBin, generateQRCode } from '../../../utils/api.jsx';
 
 const MyBins = () => {
   const { user } = useAuth();
@@ -27,7 +26,8 @@ const MyBins = () => {
   const [openQRModal, setOpenQRModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [selectedBin, setSelectedBin] = useState(null);
-  const [qrBinData, setQrBinData] = useState(null);
+  const [qrCodeData, setQrCodeData] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [requests, setRequests] = useState([]);
   const [bins, setBins] = useState([]);
@@ -195,15 +195,51 @@ const MyBins = () => {
     setSelectedBin(null);
   };
 
-  const handleOpenQRModal = (bin) => {
-    setQrBinData(bin);
-    setOpenQRModal(true);
+  const handleGenerateQR = async (bin) => {
+    try {
+      setQrLoading(true);
+      setSelectedBin(bin);
+      
+      // Create unique QR data for this user's bin
+      const qrData = {
+        binId: bin.binId,
+        userId: getUserId(),
+        binType: bin.binType,
+        userEmail: user?.email,
+        userName: user?.name,
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await generateQRCode(qrData);
+      
+      if (response && response.success) {
+        setQrCodeData({
+          ...response.data,
+          binInfo: bin,
+          userInfo: {
+            name: user?.name,
+            email: user?.email
+          }
+        });
+        setOpenQRModal(true);
+        showSnackbar('QR code generated successfully!', 'success');
+      } else {
+        throw new Error(response?.message || 'Failed to generate QR code');
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      showSnackbar('Error generating QR code. Please try again.', 'error');
+    } finally {
+      setQrLoading(false);
+    }
   };
 
   const handleCloseQRModal = () => {
     setOpenQRModal(false);
-    setQrBinData(null);
+    setQrCodeData(null);
+    setSelectedBin(null);
   };
+
 
 
   const handleUpdateFillLevel = async () => {
@@ -454,12 +490,6 @@ const MyBins = () => {
         
         handleCloseCreateModal();
         
-        // Show QR code modal for the newly created bin
-        if (response.data) {
-          setQrBinData(response.data);
-          setOpenQRModal(true);
-        }
-        
         // Reload bins to show the newly created one
         loadUserBins();
       } else {
@@ -673,11 +703,16 @@ const MyBins = () => {
             </div>
             <div className="grid grid-cols-3 gap-2">
               <button 
-                onClick={() => handleOpenQRModal(bin)}
-                className="flex items-center justify-center space-x-2 bg-purple-50 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium border border-purple-200"
+                onClick={() => handleGenerateQR(bin)}
+                disabled={qrLoading}
+                className="flex items-center justify-center space-x-2 bg-purple-50 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium border border-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <MdQrCode className="text-lg" />
-                <span>QR Code</span>
+                {qrLoading ? (
+                  <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin"></div>
+                ) : (
+                  <MdQrCode className="text-lg" />
+                )}
+                <span>{qrLoading ? 'Generating...' : 'QR Code'}</span>
               </button>
               <button 
                 onClick={() => handleOpenFillLevelModal(bin)}
@@ -1386,12 +1421,116 @@ const MyBins = () => {
       )}
 
       {/* QR Code Modal */}
-      <QRGenerator
-        isOpen={openQRModal}
-        onClose={handleCloseQRModal}
-        binData={qrBinData}
-        getBinTypeLabel={getBinTypeLabel}
-      />
+      {openQRModal && qrCodeData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">QR Code Generated</h2>
+                <button
+                  onClick={handleCloseQRModal}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {/* Bin Information */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Bin Information</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Bin ID:</span>
+                    <span className="text-sm text-gray-800 font-semibold">{selectedBin?.binId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Type:</span>
+                    <span className="text-sm text-gray-800">{getBinTypeLabel(selectedBin?.binType)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Owner:</span>
+                    <span className="text-sm text-gray-800">{user?.name}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* QR Code Display */}
+              <div className="text-center mb-6">
+                <div className="bg-white p-4 rounded-xl border-2 border-gray-200 inline-block">
+                  {qrCodeData.qrCode ? (
+                    <img 
+                      src={qrCodeData.qrCode} 
+                      alt="QR Code" 
+                      className="w-48 h-48 mx-auto"
+                    />
+                  ) : (
+                    <div className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-8 h-8 border-4 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-600">Generating QR Code...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* QR Code Information */}
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-semibold text-blue-800 mb-2">QR Code Details</h4>
+                <div className="space-y-1 text-sm text-blue-700">
+                  <p><strong>Generated for:</strong> {user?.name} ({user?.email})</p>
+                  <p><strong>Bin ID:</strong> {selectedBin?.binId}</p>
+                  <p><strong>Generated on:</strong> {new Date().toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="bg-green-50 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-semibold text-green-800 mb-2">Instructions</h4>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• Print this QR code and attach it to your waste bin</li>
+                  <li>• Staff can scan this QR code to identify your bin</li>
+                  <li>• Each QR code is unique to your bin and user account</li>
+                  <li>• Keep this QR code secure and don't share it with others</li>
+                </ul>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    if (qrCodeData.qrCode) {
+                      const link = document.createElement('a');
+                      link.download = `bin-${selectedBin?.binId}-qr-code.png`;
+                      link.href = qrCodeData.qrCode;
+                      link.click();
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Download QR Code</span>
+                </button>
+                
+                <button
+                  onClick={handleCloseQRModal}
+                  className="flex-1 flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors text-sm font-semibold"
+                >
+                  <span>Close</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Snackbar */}
       {snackbar.open && (
