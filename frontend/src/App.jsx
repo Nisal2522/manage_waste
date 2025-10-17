@@ -29,10 +29,14 @@ import AdminDashboard from "./pages/dashboard/admin/AdminDashboard.jsx";
 import AdminBins from "./pages/dashboard/admin/AdminBins.jsx";
 import AdminCollections from "./pages/dashboard/admin/AdminCollections.jsx";
 import AdminPayments from "./pages/dashboard/admin/AdminPayments.jsx";
-import AdminAnalytics from "./pages/dashboard/admin/AdminAnalytics.jsx";
+import AdminAnalyticsDashboard from "./pages/dashboard/admin/AdminAnalyticsDashboard.jsx";
+import AdminUserManagement from "./pages/dashboard/admin/AdminUserManagement.jsx";
 import AdminUsers from "./pages/dashboard/admin/AdminUsers.jsx";
 import AdminBinRequests from "./pages/dashboard/admin/AdminBinRequests.jsx";
+import UserAnalytics from "./pages/dashboard/admin/UserAnalytics.jsx";
 import StaffDashboard from "./pages/dashboard/staff/StaffDashboard.jsx";
+import StaffDataCollection from "./pages/dashboard/staff/StaffDataCollection.jsx";
+import ResidentDataContribution from "./pages/dashboard/resident/ResidentDataContribution.jsx";
 
 
 // Profile Page
@@ -236,7 +240,7 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={["admin"]}>
                       <LayoutWrapper>
-                        <AdminAnalytics />
+                        <AdminAnalyticsDashboard />
                       </LayoutWrapper>
                     </ProtectedRoute>
                   }
@@ -246,7 +250,7 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={["admin"]}>
                       <LayoutWrapper>
-                        <AdminUsers />
+                        <AdminUserManagement />
                       </LayoutWrapper>
                     </ProtectedRoute>
                   }
@@ -257,6 +261,16 @@ function App() {
                     <ProtectedRoute allowedRoles={["admin"]}>
                       <LayoutWrapper>
                         <AdminBinRequests />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/user-analytics"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin"]}>
+                      <LayoutWrapper>
+                        <UserAnalytics />
                       </LayoutWrapper>
                     </ProtectedRoute>
                   }
@@ -279,6 +293,16 @@ function App() {
                     <ProtectedRoute allowedRoles={["staff", "admin"]}>
                       <LayoutWrapper>
                         <StaffDashboard />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/staff/data-collection"
+                  element={
+                    <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                      <LayoutWrapper>
+                        <StaffDataCollection />
                       </LayoutWrapper>
                     </ProtectedRoute>
                   }
@@ -309,6 +333,16 @@ function App() {
                     <ProtectedRoute allowedRoles={["resident", "admin"]}>
                       <LayoutWrapper>
                         <MyBins />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/resident/data-contribution"
+                  element={
+                    <ProtectedRoute allowedRoles={["resident", "admin"]}>
+                      <LayoutWrapper>
+                        <ResidentDataContribution />
                       </LayoutWrapper>
                     </ProtectedRoute>
                   }
