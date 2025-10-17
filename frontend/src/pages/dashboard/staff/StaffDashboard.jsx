@@ -38,12 +38,13 @@ import {
   CheckCircle,
   Warning,
   Info,
+  QrCodeScanner,
   Add,
   MoreVert,
   Directions,
   Assignment
 } from '@mui/icons-material';
-import QRGenerator from '../../../components/common/QRGenerator';
+import QRGenerator from '../../../components/Common/QRGenerator';
 
 const StaffDashboard = () => {
   const navigate = useNavigate();
@@ -366,6 +367,23 @@ const StaffDashboard = () => {
                       sx={{ py: 2 }}
                     >
                       Report Issue
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      variant="contained"
+                      startIcon={<QrCodeScanner />}
+                      fullWidth
+                      onClick={() => navigate('/staff/qr-collection')}
+                      sx={{
+                        py: 2,
+                        background: 'linear-gradient(45deg, #3b82f6, #6366f1)',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #2563eb, #4f46e5)'
+                        }
+                      }}
+                    >
+                      Scan Bin QR
                     </Button>
                   </Grid>
                   <Grid item xs={12} sm={6}>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  MdQrCodeScanner,
   MdCheckCircle,
   MdLocationOn,
   MdPerson,
@@ -14,9 +13,10 @@ import {
   MdCancel,
   MdArrowBack
 } from 'react-icons/md';
+import { QrCodeScanner } from '@mui/icons-material';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import SimpleQRScanner from '../../../components/common/SimpleQRScanner.jsx';
+import SimpleQRScanner from '../../../components/Common/SimpleQRScanner.jsx';
 import { scanQRCode, updateBinFillLevel, getBins, createCollection } from '../../../utils/api.jsx';
 
 const StaffQRCollection = () => {
@@ -35,7 +35,8 @@ const StaffQRCollection = () => {
     wasteType: 'organic',
     weight: '',
     notes: '',
-    collectionTime: new Date().toISOString().slice(0, 16) // Format for datetime-local input
+    collectionTime: new Date().toISOString().slice(0, 16), // Format for datetime-local input
+    status: 'collected' // default status when scanning
   });
 
   const wasteTypes = [
@@ -238,19 +239,49 @@ const StaffQRCollection = () => {
     setError(null);
 
     try {
+      // Extract correct IDs with detailed logging
+      const staffId = user?._id || user?.id;
+      const residentId = scannedBin.userId?._id || scannedBin.userId?.id || scannedBin.userId;
+      const binId = scannedBin._id || scannedBin.id;
+
+      console.log('User object:', user);
+      console.log('Staff ID:', staffId);
+      console.log('Resident ID:', residentId);
+      console.log('Bin ID:', binId);
+      console.log('Scanned bin:', scannedBin);
+
+      // Validate required fields before sending
+      if (!binId) {
+        throw new Error('Bin ID is missing. Please scan the QR code again.');
+      }
+      if (!staffId) {
+        throw new Error('Staff ID is missing. Please log in again.');
+      }
+      if (!residentId) {
+        throw new Error('Resident ID is missing. Invalid bin data.');
+      }
+
       const collectionPayload = {
-        binId: scannedBin._id,
+        // Backend expects: bin, staff, resident, weight, isCollected
+        bin: binId,
+        staff: staffId,
+        resident: residentId,
+        weight: parseFloat(collectionData.weight),
+        isCollected: (collectionData.status || 'collected') === 'collected',
+
+        // Additional metadata (backend will ignore unknown fields but we keep for clarity)
         binQRCode: scannedBin.binId,
         wasteType: collectionData.wasteType,
-        weight: parseFloat(collectionData.weight),
         notes: collectionData.notes,
         collectionTime: new Date(collectionData.collectionTime).toISOString(),
-        residentId: scannedBin.userId?._id || scannedBin.userId
+        scannedQRCodeRaw: scannedBin.binQRCode || scannedBin.binId || null
       };
 
       console.log('Submitting collection data:', collectionPayload);
 
       const response = await createCollection(collectionPayload);
+      
+      console.log('createCollection response:', response);
       
       if (response && response.success) {
         setSuccess('Bin marked as collected successfully! Fill level reset to 0%.');
@@ -271,7 +302,8 @@ const StaffQRCollection = () => {
       }
     } catch (error) {
       console.error('Error marking bin as collected:', error);
-      setError(error.message || 'Failed to mark bin as collected. Please try again.');
+      console.error('Error details:', error.response?.data || error);
+      setError(error.response?.data?.message || error.message || 'Failed to mark bin as collected. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -369,7 +401,7 @@ const StaffQRCollection = () => {
           <div className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl p-6">
             <div className="text-center">
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MdQrCodeScanner className="text-blue-600 text-3xl" />
+                <QrCodeScanner className="text-blue-600 text-3xl" />
               </div>
               
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
@@ -392,7 +424,7 @@ const StaffQRCollection = () => {
                   </>
                 ) : (
                   <>
-                    <MdQrCodeScanner className="text-xl" />
+                    <QrCodeScanner className="text-xl" />
                     <span>Scan QR Code</span>
                   </>
                 )}
@@ -414,6 +446,10 @@ const StaffQRCollection = () => {
                   <div>
                     <div className="text-sm font-medium text-gray-600">Bin ID</div>
                     <div className="text-lg font-semibold text-gray-800">{scannedBin.binId}</div>
+                    {/* Show raw scanned QR code if available */}
+                    {scannedBin.binQRCode && (
+                      <div className="text-xs text-gray-500 mt-1">Scanned QR: <span className="font-mono">{scannedBin.binQRCode}</span></div>
+                    )}
                   </div>
                 </div>
 
@@ -549,6 +585,19 @@ const StaffQRCollection = () => {
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
                 />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                <select
+                  value={collectionData.status}
+                  onChange={handleInputChange('status')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                >
+                  <option value="collected">Collected</option>
+                  <option value="not_collected">Not Collected</option>
+                </select>
               </div>
             </div>
 

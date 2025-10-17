@@ -1,6 +1,7 @@
 import Collection from '../models/Collection.js';
 import Bin from '../models/Bin.js';
 import User from '../models/User.js';
+import Invoice from '../models/Invoice.js';
 
 // Get all collections
 export const getCollections = async (req, res) => {
@@ -26,10 +27,23 @@ export const getCollections = async (req, res) => {
       .populate('resident', 'name email')
       .sort({ collectionTime: -1 });
 
+    // For each collection, check if an invoice exists
+    const collectionsWithInvoice = await Promise.all(
+      collections.map(async (collection) => {
+        const invoice = await Invoice.findOne({ collection: collection._id })
+          .select('invoiceNumber status totalAmount paidDate');
+        
+        return {
+          ...collection.toObject(),
+          invoice: invoice || null
+        };
+      })
+    );
+
     res.json({
       success: true,
-      data: collections,
-      count: collections.length
+      data: collectionsWithInvoice,
+      count: collectionsWithInvoice.length
     });
   } catch (error) {
     console.error('Error fetching collections:', error);

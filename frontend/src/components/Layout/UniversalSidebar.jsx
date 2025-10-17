@@ -101,7 +101,8 @@ const UniversalSidebar = ({ open, onClose }) => {
           {
             text: "Collections",
             icon: <Recycling />,
-            path: "/staff/collections",
+            // Point to the QR collection page (existing route)
+            path: "/staff/qr-collection",
           },
           {
             text: "Bins",
@@ -139,9 +140,9 @@ const UniversalSidebar = ({ open, onClose }) => {
             path: "/resident/requests",
           },
           {
-            text: "Payments",
+            text: "My Invoices",
             icon: <Payment />,
-            path: "/resident/payments",
+            path: "/resident/invoices",
           },
           {
             text: "Support",

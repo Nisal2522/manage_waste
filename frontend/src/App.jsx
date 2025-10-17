@@ -48,6 +48,7 @@ import Profile from "./pages/Profile.jsx";
 import ResidentDashboard from "./pages/dashboard/resident/ResidentDashboard.jsx";
 import ResidentBinRequests from "./pages/dashboard/resident/ResidentBinRequests.jsx";
 import MyBins from "./pages/dashboard/resident/MyBin.jsx";
+import ResidentInvoices from "./pages/dashboard/resident/ResidentInvoices.jsx";
 
 // Layout Components
 import LayoutWrapper from "./components/Layout/LayoutWrapper.jsx";
@@ -365,6 +366,16 @@ function App() {
                     <ProtectedRoute allowedRoles={["resident", "admin"]}>
                       <LayoutWrapper>
                         <ResidentDataContribution />
+                      </LayoutWrapper>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/resident/invoices"
+                  element={
+                    <ProtectedRoute allowedRoles={["resident", "admin"]}>
+                      <LayoutWrapper>
+                        <ResidentInvoices />
                       </LayoutWrapper>
                     </ProtectedRoute>
                   }

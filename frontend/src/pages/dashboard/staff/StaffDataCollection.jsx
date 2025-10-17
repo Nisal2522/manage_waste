@@ -56,9 +56,13 @@ const StaffDataCollection = () => {
     try {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
+      const staffId = user?._id || user?.id;
+      
+      console.log('Fetching collections for staff:', staffId);
+      
       const response = await getCollections({
         date: today,
-        staff: user?.user?._id || user?._id
+        staff: staffId
       });
       
       if (response.success) {
@@ -77,9 +81,18 @@ const StaffDataCollection = () => {
       setLoading(true);
       setError(null);
       
+      const staffId = user?._id || user?.id;
+      
+      console.log('Submitting collection with staff ID:', staffId);
+      console.log('Collection data:', collectionData);
+      
+      if (!staffId) {
+        throw new Error('Staff ID is missing. Please log in again.');
+      }
+      
       const response = await createCollection({
         ...collectionData,
-        staff: user?.user?._id || user?._id,
+        staff: staffId,
         weight: parseFloat(collectionData.weight),
         collectionTime: new Date(collectionData.collectionTime)
       });

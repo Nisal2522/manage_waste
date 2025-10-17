@@ -13,6 +13,8 @@ import testAnalyticsRoutes from './routes/testAnalytics.js';
 import userStatsRoutes from './routes/userStats.js';
 import collectionRoutes from './routes/collections.js';
 import qrRoutes from './routes/qr.js';
+import invoiceRoutes from './routes/invoices.js';
+import paymentRoutes from './routes/payments.js';
 
 dotenv.config();
 
@@ -25,9 +27,18 @@ const allowedOrigins = ['http://localhost:3000'];
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add request logging
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.path} - From: ${req.get('origin') || 'unknown'}`);
+  next();
+});
 
 // Add cache prevention headers
 app.use((req, res, next) => {
@@ -57,6 +68,8 @@ app.use('/api/test-analytics', testAnalyticsRoutes);
 app.use('/api/user-stats', userStatsRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/qr', qrRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

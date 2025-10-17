@@ -13,7 +13,7 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 // Apply authentication middleware to all routes
-router.use(authenticateToken);
+router.use(authenticateToken());
 
 // GET /api/collections - Get all collections
 router.get('/', getCollections);

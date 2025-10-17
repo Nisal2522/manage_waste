@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MdQrCodeScanner, MdClose, MdFlashOn, MdFlashOff } from 'react-icons/md';
+import { QrCodeScanner, Close, FlashOn, FlashOff } from '@mui/icons-material';
 import jsQR from 'jsqr';
 
 const SimpleQRScanner = ({ 
@@ -146,14 +146,14 @@ const SimpleQRScanner = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <MdQrCodeScanner className="text-2xl text-blue-600" />
+            <QrCodeScanner className="text-2xl text-blue-600" />
             <h2 className="text-xl font-bold text-gray-900">{title}</h2>
           </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <MdClose className="text-xl text-gray-600" />
+            <Close className="text-xl text-gray-600" />
           </button>
         </div>
 
@@ -166,14 +166,14 @@ const SimpleQRScanner = ({
             {!hasPermission && !error ? (
               <div className="aspect-video flex items-center justify-center">
                 <div className="text-center text-white">
-                  <MdQrCodeScanner className="text-4xl mx-auto mb-2" />
+                  <QrCodeScanner className="text-4xl mx-auto mb-2" />
                   <p className="text-sm">Requesting camera access...</p>
                 </div>
               </div>
             ) : error ? (
               <div className="aspect-video flex items-center justify-center">
                 <div className="text-center text-white p-4">
-                  <MdQrCodeScanner className="text-4xl mx-auto mb-2" />
+                  <QrCodeScanner className="text-4xl mx-auto mb-2" />
                   <p className="text-sm mb-4">{error}</p>
                   <button
                     onClick={startScanning}
@@ -191,7 +191,7 @@ const SimpleQRScanner = ({
                   playsInline
                   muted
                 />
-                
+
                 {/* Scanning overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-48 h-48 border-2 border-blue-500 rounded-lg relative">
@@ -219,7 +219,7 @@ const SimpleQRScanner = ({
                 onClick={toggleFlash}
                 className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
               >
-                {flashOn ? <MdFlashOff className="text-lg" /> : <MdFlashOn className="text-lg" />}
+                {flashOn ? <FlashOff className="text-lg" /> : <FlashOn className="text-lg" />}
                 <span>{flashOn ? 'Flash Off' : 'Flash On'}</span>
               </button>
             )}

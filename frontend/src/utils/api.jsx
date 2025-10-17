@@ -5,6 +5,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // 30 second timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -157,8 +158,35 @@ export const getCollectionById = async (id) => {
 };
 
 export const createCollection = async (collectionData) => {
-  const response = await api.post('/collections', collectionData);
-  return response.data;
+  try {
+    console.log('API: Creating collection with data:', collectionData);
+    console.log('API: Sending to:', `${API_BASE_URL}/collections`);
+    console.log('API: Token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+    
+    const response = await api.post('/collections', collectionData);
+    
+    console.log('API: Collection created successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('API: Error creating collection:', error);
+    console.error('API: Error name:', error.name);
+    console.error('API: Error message:', error.message);
+    console.error('API: Error code:', error.code);
+    console.error('API: Error response:', error.response?.data);
+    console.error('API: Error status:', error.response?.status);
+    console.error('API: Error config:', error.config);
+    
+    // Check for specific error types
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timeout. Server took too long to respond.');
+    } else if (error.code === 'ERR_NETWORK') {
+      throw new Error('Network error. Cannot reach the server.');
+    } else if (error.response?.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    }
+    
+    throw error;
+  }
 };
 
 export const updateCollection = async (id, collectionData) => {
@@ -335,6 +363,109 @@ export const getBinsByUser = async (userId) => {
 export const updateBinFillLevel = async (binId, fillLevel) => {
   const response = await api.patch(`/bins/${binId}/fill-level`, { fillLevel });
   return response.data;
+};
+
+// Invoice API
+export const getInvoices = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.resident) params.append('resident', filters.resident);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    
+    const response = await api.get(`/invoices?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    throw error;
+  }
+};
+
+export const getInvoiceById = async (id) => {
+  try {
+    const response = await api.get(`/invoices/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching invoice:', error);
+    throw error;
+  }
+};
+
+export const createInvoiceFromCollection = async (invoiceData) => {
+  try {
+    console.log('API: Creating invoice:', invoiceData);
+    const response = await api.post('/invoices', invoiceData);
+    console.log('API: Invoice created successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('API: Error creating invoice:', error);
+    console.error('API: Error response:', error.response?.data);
+    throw error;
+  }
+};
+
+export const updateInvoiceStatus = async (id, statusData) => {
+  try {
+    const response = await api.patch(`/invoices/${id}/status`, statusData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating invoice status:', error);
+    throw error;
+  }
+};
+
+export const deleteInvoice = async (id) => {
+  try {
+    const response = await api.delete(`/invoices/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting invoice:', error);
+    throw error;
+  }
+};
+
+export const getResidentInvoices = async (residentId) => {
+  try {
+    const response = await api.get(`/invoices/resident/${residentId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching resident invoices:', error);
+    throw error;
+  }
+};
+
+// Payment API
+export const createStripeCheckoutSession = async (invoiceId) => {
+  try {
+    console.log('API: Creating Stripe checkout session for invoice:', invoiceId);
+    const response = await api.post('/payments/create-checkout-session', { invoiceId });
+    console.log('API: Checkout session created:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    throw error;
+  }
+};
+
+export const verifyPaymentSession = async (sessionId) => {
+  try {
+    const response = await api.get(`/payments/verify/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    throw error;
+  }
+};
+
+export const getPaymentHistory = async () => {
+  try {
+    const response = await api.get('/payments/history');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching payment history:', error);
+    throw error;
+  }
 };
 
 export default api;
