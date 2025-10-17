@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -44,6 +45,8 @@ import {
 } from '@mui/icons-material';
 
 const StaffDashboard = () => {
+  const navigate = useNavigate();
+  
   // Mock data - replace with actual API calls
   const stats = [
     { title: 'Routes Completed', value: '8/12', change: '+2', color: 'success.main', icon: <Directions /> },
@@ -90,12 +93,29 @@ const StaffDashboard = () => {
       <Container maxWidth="xl">
         {/* Header */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
-            Staff Dashboard
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage your collection routes and track your daily performance.
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box>
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                Staff Dashboard
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Manage your collection routes and track your daily performance.
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<Assignment />}
+              onClick={() => navigate('/staff/data-collection')}
+              sx={{
+                background: 'linear-gradient(45deg, #10b981, #059669)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #059669, #047857)'
+                }
+              }}
+            >
+              Data Collection
+            </Button>
+          </Box>
         </Box>
 
         {/* Stats Cards */}

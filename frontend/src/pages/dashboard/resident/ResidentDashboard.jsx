@@ -1,520 +1,342 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box,
-  Container,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  Button,
-  Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Divider,
-  Paper,
-  IconButton,
-  Badge,
-  LinearProgress
-} from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  Recycling,
-  Schedule,
-  TrendingUp,
-  Notifications,
-  LocationOn,
-  CalendarToday,
-  CheckCircle,
-  Warning,
-  Info,
-  Add,
-  MoreVert,
-  RequestPage
-} from '@mui/icons-material';
+  MdDashboard,
+  MdRecycling,
+  MdSchedule,
+  MdTrendingUp,
+  MdNotifications,
+  MdLocationOn,
+  MdCalendarToday,
+  MdCheckCircle,
+  MdWarning,
+  MdInfo,
+  MdAdd,
+  MdMoreVert,
+  MdRequestPage,
+  MdDelete,
+  MdEdit
+} from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext.jsx';
+import { useAuth } from '../../../context/AuthContext';
+import { getBinRequestsByUser } from '../../../utils/api';
 
 const ResidentDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [binRequests, setBinRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user's bin requests
+  const fetchBinRequests = useCallback(async () => {
+    // Try different possible user ID properties
+    const userId = user?.id || user?._id || user?.user?.id || user?.user?._id;
+    
+    if (!userId) {
+      console.log('No user ID found. User object:', user);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('Fetching bin requests for user ID:', userId);
+      const response = await getBinRequestsByUser(userId);
+      console.log('API Response:', response);
+      console.log('Response data:', response.data);
+      console.log('Response success:', response.success);
+      
+      if (response.success && response.data) {
+        setBinRequests(response.data);
+        console.log('Set bin requests:', response.data);
+      } else {
+        console.log('No data in response or request failed');
+        setBinRequests([]);
+      }
+    } catch (error) {
+      console.error('Error fetching bin requests:', error);
+      console.error('Error details:', error.response?.data);
+      setBinRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchBinRequests();
+  }, [fetchBinRequests]);
   
-  // Mock data - replace with actual API calls
+  // Calculate stats from real bin requests data
+  const totalRequests = binRequests.length;
+  const pendingRequests = binRequests.filter(req => req.status === 'pending').length;
+  const approvedRequests = binRequests.filter(req => req.status === 'approved').length;
+
+  // Debug logging
+  console.log('Bin requests array:', binRequests);
+  console.log('Total requests:', totalRequests);
+  console.log('Pending requests:', pendingRequests);
+  console.log('Approved requests:', approvedRequests);
+
   const stats = [
-    { title: 'Waste Collected', value: '45.2 kg', change: '+8%', color: 'success.main', icon: <Recycling /> },
-    { title: 'Next Collection', value: 'Tomorrow', change: '9:00 AM', color: 'info.main', icon: <Schedule /> },
-    { title: 'Points Earned', value: '1,250', change: '+50', color: 'warning.main', icon: <TrendingUp /> },
-    { title: 'Recycling Rate', value: '85%', change: '+5%', color: 'primary.main', icon: <Recycling /> }
+    { title: 'Total Requests', value: totalRequests.toString(), change: '', color: 'bg-blue-500', icon: <MdRequestPage className="text-2xl" /> },
+    { title: 'Pending', value: pendingRequests.toString(), change: '', color: 'bg-amber-500', icon: <MdSchedule className="text-2xl" /> },
+    { title: 'Approved', value: approvedRequests.toString(), change: '', color: 'bg-green-500', icon: <MdCheckCircle className="text-2xl" /> }
   ];
 
-  const upcomingCollections = [
-    { id: 1, type: 'Organic', date: 'Tomorrow', time: '9:00 AM', status: 'scheduled' },
-    { id: 2, type: 'Recyclables', date: 'Friday', time: '2:00 PM', status: 'scheduled' },
-    { id: 3, type: 'General', date: 'Next Monday', time: '10:00 AM', status: 'scheduled' }
-  ];
+  // Show recent bin requests as upcoming collections
+  const upcomingCollections = binRequests
+    .filter(req => req.status === 'pending' || req.status === 'approved')
+    .slice(0, 3)
+    .map((req, index) => ({
+      id: req._id || req.id || index,
+      type: req.selectedBins ? req.selectedBins.map(bin => bin.binType).join(', ') : 'General',
+      date: req.requestDate ? new Date(req.requestDate).toLocaleDateString() : 'Today',
+      time: req.requestDate ? new Date(req.requestDate).toLocaleTimeString() : 'N/A',
+      status: req.status
+    }));
 
-  const recentActivities = [
-    { id: 1, type: 'success', message: 'Waste collection completed', time: '2 days ago' },
-    { id: 2, type: 'info', message: 'New collection scheduled', time: '1 week ago' },
-    { id: 3, type: 'warning', message: 'Reminder: Separate your waste', time: '2 weeks ago' },
-    { id: 4, type: 'success', message: 'Points earned for recycling', time: '3 weeks ago' }
-  ];
+  // Show recent bin request activities
+  const recentActivities = binRequests
+    .slice(0, 4)
+    .map((req, index) => ({
+      id: req._id || req.id || index,
+      type: req.status === 'completed' ? 'success' : req.status === 'approved' ? 'info' : 'warning',
+      message: `Bin request ${req.status} - ${req.selectedBins ? req.selectedBins.map(bin => bin.binType).join(', ') : 'General'} bins`,
+      time: req.requestDate ? new Date(req.requestDate).toLocaleDateString() : 'Recently'
+    }));
 
   const getActivityIcon = (type) => {
     switch (type) {
-      case 'success': return <CheckCircle color="success" />;
-      case 'info': return <Info color="info" />;
-      case 'warning': return <Warning color="warning" />;
-      default: return <Info color="info" />;
+      case 'success': return <MdCheckCircle className="text-green-500 text-xl" />;
+      case 'info': return <MdInfo className="text-blue-500 text-xl" />;
+      case 'warning': return <MdWarning className="text-amber-500 text-xl" />;
+      default: return <MdInfo className="text-blue-500 text-xl" />;
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'scheduled': return 'primary';
-      case 'completed': return 'success';
-      case 'cancelled': return 'error';
-      default: return 'default';
+      case 'scheduled': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'pending': return 'bg-amber-100 text-amber-800';
+      case 'approved': return 'bg-emerald-100 text-emerald-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
-    <Box className="dashboard-content-stable" sx={{ 
-      flex: 1,
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'flex-start',
-      alignItems: 'flex-start',
-      padding: '20px',
-      background: '#ffffff', // Changed to white background
-      minHeight: '100vh',
-      position: 'relative',
-      left: 0,
-      top: 0,
-      marginLeft: 0,  // Ensure no left margin
-      marginRight: 0,  // Ensure no right margin
-      overflow: 'hidden'
-    }}>
-      {/* Enhanced Background Effects */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          overflow: 'hidden',
-          pointerEvents: 'none',
-          zIndex: 0
-        }}
-      >
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '10%',
-            left: '10%',
-            width: 200,
-            height: 200,
-            borderRadius: '50%',
-            background: 'linear-gradient(45deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))',
-            filter: 'blur(40px)',
-            animation: 'float 6s ease-in-out infinite'
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '60%',
-            right: '15%',
-            width: 150,
-            height: 150,
-            borderRadius: '50%',
-            background: 'linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1))',
-            filter: 'blur(30px)',
-            animation: 'float 8s ease-in-out infinite reverse'
-          }}
-        />
-      </Box>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-48 h-48 bg-gradient-to-r from-emerald-200/30 to-green-200/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-60 right-15 w-36 h-36 bg-gradient-to-r from-blue-200/30 to-indigo-200/30 rounded-full blur-2xl animate-pulse delay-1000"></div>
+      </div>
 
-      <Container maxWidth="xl" sx={{ 
-        px: { xs: 2, sm: 3 },
-        width: '100%',
-        textAlign: 'left',
-        marginLeft: 0,
-        marginRight: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        position: 'relative',
-        zIndex: 1
-      }}>
+      <div className="relative z-10 p-6 max-w-7xl mx-auto">
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 1, color: '#1f2937' }}>
-            Welcome Back{user?.name ? `, ${user.name}` : user?.user?.name ? `, ${user.user.name}` : ''}! 👋
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Track your waste management activities and environmental impact.
-          </Typography>
-        </Box>
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                Welcome Back{user?.name ? `, ${user.name}` : user?.user?.name ? `, ${user.user.name}` : ''}! 👋
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Track your waste management activities and environmental impact.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/resident/data-contribution')}
+              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-xl hover:from-emerald-700 hover:to-green-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
+            >
+              <MdRecycling className="text-xl" />
+              <span>Contribute Data</span>
+            </button>
+          </div>
+        </div>
 
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ 
-          mb: 4, 
-          justifyContent: 'flex-start',
-          display: 'flex',
-          flexWrap: 'wrap',
-          width: '100%',
-          marginLeft: 0,
-          marginRight: 0
-        }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {stats.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <Card sx={{ 
-                height: '180px',
-                minWidth: '200px',
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: 3,
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(16, 185, 129, 0.2)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)'
-                }
-              }}>
-                <CardContent sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Avatar sx={{ backgroundColor: stat.color, width: 50, height: 50 }}>
-                      {stat.icon}
-                    </Avatar>
-                    <Chip 
-                      label={stat.change} 
-                      color="success" 
-                      size="small"
-                      sx={{ 
-                        fontWeight: 'bold',
-                        fontSize: '12px',
-                        height: '24px',
-                        backgroundColor: '#27ae60',
-                        color: 'white'
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <Typography variant="h4" component="div" sx={{ 
-                      fontWeight: 'bold', 
-                      mb: 1, 
-                      fontSize: '28px',
-                      lineHeight: 1.2
-                    }}>
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
-                      {stat.title}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+            <div key={index} className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-300/50 p-6 h-48 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`${stat.color} w-12 h-12 rounded-xl flex items-center justify-center text-white`}>
+                  {stat.icon}
+                </div>
+                {stat.change && (
+                  <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    {stat.change}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="text-3xl font-bold text-gray-800 mb-1">
+                  {loading ? (
+                    <div className="animate-pulse bg-gray-300 h-8 w-12 rounded"></div>
+                  ) : (
+                    stat.value
+                  )}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {stat.title}
+                </div>
+              </div>
+            </div>
           ))}
-        </Grid>
+        </div>
 
-        <Grid container spacing={3} sx={{ 
-          justifyContent: 'flex-start',
-          display: 'flex',
-          flexWrap: 'wrap',
-          width: '100%',
-          marginLeft: 0,
-          marginRight: 0
-        }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Upcoming Collections */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ 
-              height: '400px',
-              minWidth: '200px',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: 3,
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 12px 40px rgba(16, 185, 129, 0.2)',
-                border: '1px solid rgba(16, 185, 129, 0.3)'
-              }
-            }}>
-              <CardHeader
-                title="Upcoming Collections"
-                action={
-                  <IconButton>
-                    <MoreVert />
-                  </IconButton>
-                }
-                sx={{ pb: 1 }}
-              />
-              <Divider />
-              <CardContent sx={{ p: 0 }}>
-                <List sx={{ p: 0 }}>
-                  {upcomingCollections.map((collection, index) => (
-                    <React.Fragment key={collection.id}>
-                      <ListItem sx={{ py: 2 }}>
-                        <ListItemAvatar>
-                          <Avatar sx={{ backgroundColor: 'success.light' }}>
-                            <Recycling />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                {collection.type} Waste
-                              </Typography>
-                              <Chip 
-                                label={collection.status} 
-                                color={getStatusColor(collection.status)}
-                                size="small"
-                              />
-                            </Box>
-                          }
-                          secondary={
-                            <Box>
-                              <Typography variant="body2" color="text.secondary">
-                                {collection.date} at {collection.time}
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                      </ListItem>
-                      {index < upcomingCollections.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
+          <div className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-300/50 overflow-hidden h-96 flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-800">Upcoming Collections</h3>
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <MdMoreVert className="text-gray-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="p-4 text-center">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded"></div>
+                  </div>
+                </div>
+              ) : upcomingCollections.length > 0 ? (
+                upcomingCollections.map((collection, index) => (
+                  <div key={collection.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <MdRecycling className="text-green-600 text-xl" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800">{collection.type} Waste</h4>
+                        <p className="text-sm text-gray-600">{collection.date} at {collection.time}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(collection.status)}`}>
+                        {collection.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  <MdRecycling className="text-4xl mx-auto mb-2 text-gray-300" />
+                  <p>No upcoming collections</p>
+                  <p className="text-sm">Create a bin request to get started</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Recent Activities */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ 
-              height: '400px',
-              minWidth: '200px',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: 3,
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 12px 40px rgba(16, 185, 129, 0.2)',
-                border: '1px solid rgba(16, 185, 129, 0.3)'
-              }
-            }}>
-              <CardHeader
-                title="Recent Activities"
-                action={
-                  <IconButton>
-                    <MoreVert />
-                  </IconButton>
-                }
-                sx={{ pb: 1 }}
-              />
-              <Divider />
-              <CardContent sx={{ p: 0 }}>
-                <List sx={{ p: 0 }}>
-                  {recentActivities.map((activity, index) => (
-                    <React.Fragment key={activity.id}>
-                      <ListItem sx={{ py: 2 }}>
-                        <ListItemAvatar>
-                          <Avatar sx={{ backgroundColor: 'transparent' }}>
-                            {getActivityIcon(activity.type)}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={activity.message}
-                          secondary={activity.time}
-                        />
-                      </ListItem>
-                      {index < recentActivities.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
+          <div className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-300/50 overflow-hidden h-96 flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-800">Recent Activities</h3>
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <MdMoreVert className="text-gray-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="p-4 text-center">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded"></div>
+                  </div>
+                </div>
+              ) : recentActivities.length > 0 ? (
+                recentActivities.map((activity, index) => (
+                  <div key={activity.id} className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-transparent rounded-full flex items-center justify-center">
+                        {getActivityIcon(activity.type)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-gray-800 font-medium">{activity.message}</p>
+                        <p className="text-sm text-gray-600">{activity.time}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  <MdInfo className="text-4xl mx-auto mb-2 text-gray-300" />
+                  <p>No recent activities</p>
+                  <p className="text-sm">Your activities will appear here</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Environmental Impact */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ 
-              height: '400px',
-              minWidth: '200px',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: 3,
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 12px 40px rgba(16, 185, 129, 0.2)',
-                border: '1px solid rgba(16, 185, 129, 0.3)'
-              }
-            }}>
-              <CardHeader
-                title="Environmental Impact"
-                sx={{ pb: 1 }}
-              />
-              <Divider />
-              <CardContent>
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      CO2 Saved
-                    </Typography>
-                    <Typography variant="body2" fontWeight="bold">
-                      12.5 kg
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={75} 
-                    sx={{ height: 8, borderRadius: 4, backgroundColor: '#e0e0e0' }}
-                  />
-                </Box>
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Recycling Rate
-                    </Typography>
-                    <Typography variant="body2" fontWeight="bold">
-                      85%
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={85} 
-                    color="success"
-                    sx={{ height: 8, borderRadius: 4, backgroundColor: '#e0e0e0' }}
-                  />
-                </Box>
-                <Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Waste Reduction
-                    </Typography>
-                    <Typography variant="body2" fontWeight="bold">
-                      60%
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={60} 
-                    color="warning"
-                    sx={{ height: 8, borderRadius: 4, backgroundColor: '#e0e0e0' }}
-                  />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+          <div className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-300/50 overflow-hidden h-96 flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-800">Environmental Impact</h3>
+            </div>
+            <div className="p-6 space-y-6">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600">CO2 Saved</span>
+                  <span className="text-sm font-bold text-gray-800">12.5 kg</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600">Recycling Rate</span>
+                  <span className="text-sm font-bold text-gray-800">85%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '85%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600">Waste Reduction</span>
+                  <span className="text-sm font-bold text-gray-800">60%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-amber-500 h-2 rounded-full" style={{ width: '60%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Quick Actions */}
-          <Grid item xs={12} md={6}>
-            <Card sx={{ 
-              height: '400px',
-              minWidth: '200px',
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: 3,
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 12px 40px rgba(16, 185, 129, 0.2)',
-                border: '1px solid rgba(16, 185, 129, 0.3)'
-              }
-            }}>
-              <CardHeader
-                title="Quick Actions"
-                sx={{ pb: 1 }}
-              />
-              <Divider />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      startIcon={<RequestPage />}
-                      fullWidth
-                      onClick={() => navigate('/resident/requests')}
-                      sx={{ 
-                        py: 2,
-                        background: 'linear-gradient(45deg, #10b981, #059669)',
-                        '&:hover': {
-                          background: 'linear-gradient(45deg, #059669, #047857)'
-                        }
-                      }}
-                    >
-                      Request Bin
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Add />}
-                      fullWidth
-                      sx={{ py: 2 }}
-                    >
-                      Schedule Collection
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<LocationOn />}
-                      fullWidth
-                      sx={{ py: 2 }}
-                    >
-                      Find Drop-off
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<CalendarToday />}
-                      fullWidth
-                      sx={{ py: 2 }}
-                    >
-                      View Calendar
-                    </Button>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
+          <div className="bg-white/95 backdrop-blur-lg rounded-2xl border border-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-300/50 overflow-hidden h-96 flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-800">Quick Actions</h3>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  onClick={() => navigate('/resident/requests')}
+                  className="flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-3 px-4 rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-medium"
+                >
+                  <MdRequestPage className="text-xl" />
+                  <span>Request Bin</span>
+                </button>
+                <button className="flex items-center justify-center space-x-2 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-300 font-medium">
+                  <MdAdd className="text-xl" />
+                  <span>Schedule Collection</span>
+                </button>
+                <button className="flex items-center justify-center space-x-2 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-300 font-medium">
+                  <MdLocationOn className="text-xl" />
+                  <span>Find Drop-off</span>
+                </button>
+                <button className="flex items-center justify-center space-x-2 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-300 font-medium">
+                  <MdCalendarToday className="text-xl" />
+                  <span>View Calendar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

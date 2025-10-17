@@ -1,74 +1,264 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Container,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  Button,
-  Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Divider,
-  IconButton,
-  Badge,
-  LinearProgress,
-  Tooltip,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Tabs,
-  Tab
-} from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  People,
-  Recycling,
-  TrendingUp,
-  Notifications,
-  Settings,
-  Add,
-  MoreVert,
-  CheckCircle,
-  Warning,
-  Error,
-  Info,
-  FilterList,
-  Download,
-  LocalShipping,
-  Inventory,
-  SupervisorAccount,
-  BarChart,
-  PeopleAlt
-} from '@mui/icons-material';
+  MdDashboard,
+  MdPeople,
+  MdRecycling,
+  MdTrendingUp,
+  MdNotifications,
+  MdSettings,
+  MdAdd,
+  MdMoreVert,
+  MdCheckCircle,
+  MdWarning,
+  MdError,
+  MdInfo,
+  MdFilterList,
+  MdDownload,
+  MdLocalShipping,
+  MdInventory,
+  MdSupervisorAccount,
+  MdBarChart,
+  MdPeopleAlt,
+  MdNotificationsActive,
+  MdExport,
+  MdRefresh
+} from 'react-icons/md';
+import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext.jsx';
+import { getUsers, updateUser, deleteUser, getUserStats } from '../../../utils/api.jsx';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   
+  // User management state
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  
+  // Dashboard stats state
+  const [dashboardStats, setDashboardStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    newUsersThisMonth: 0,
+    userGrowthPercentage: 0,
+    activeStaff: 0,
+    activeStaffGrowth: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(false);
+  
+  
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
+
+  // Fetch users from database
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getUsers();
+      
+      if (response && response.success) {
+        setUsers(response.data || []);
+      } else {
+        throw new Error(response?.message || 'Failed to fetch users');
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch dashboard statistics
+  const fetchDashboardStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await getUserStats();
+      
+      if (response && response.success) {
+        const stats = response.data;
+        console.log('API Stats response:', stats);
+        setDashboardStats({
+          totalUsers: stats.totalUsers || 0,
+          activeUsers: stats.activeUsers || 0,
+          newUsersThisMonth: stats.newUsersThisMonth || 0,
+          userGrowthPercentage: stats.userGrowthPercentage || 0,
+          activeStaff: stats.activeStaff || 0,
+          activeStaffGrowth: stats.activeStaffGrowth || 0
+        });
+      } else {
+        // Fallback: fetch users and calculate stats
+        console.log('Using fallback: fetching users directly');
+        const usersResponse = await getUsers();
+        console.log('Users API response:', usersResponse);
+        if (usersResponse && usersResponse.success) {
+          const allUsers = usersResponse.data || [];
+          console.log('Fetched users count:', allUsers.length);
+          const activeUsers = allUsers.filter(user => user.isActive !== false);
+          const currentMonth = new Date().getMonth();
+          const currentYear = new Date().getFullYear();
+          const newUsersThisMonth = allUsers.filter(user => {
+            const userDate = new Date(user.createdAt || user.joinedAt);
+            return userDate.getMonth() === currentMonth && userDate.getFullYear() === currentYear;
+          }).length;
+          
+          // Calculate active staff (only users with role='staff' and isActive=true)
+          console.log('All users:', allUsers);
+          console.log('Users with role staff:', allUsers.filter(user => user.role === 'staff'));
+          console.log('Users with isActive true:', allUsers.filter(user => user.isActive === true));
+          
+          // Try different variations of the filter
+          const activeStaff1 = allUsers.filter(user => 
+            user.role === 'staff' && user.isActive === true
+          );
+          
+          const activeStaff2 = allUsers.filter(user => 
+            user.role === 'staff' && user.isActive !== false
+          );
+          
+          const activeStaff3 = allUsers.filter(user => 
+            user.role === 'staff'
+          );
+          
+          console.log('Active staff (isActive === true):', activeStaff1.length);
+          console.log('Active staff (isActive !== false):', activeStaff2.length);
+          console.log('All staff (any status):', activeStaff3.length);
+          
+          // Use the most permissive filter for now
+          const activeStaff = activeStaff2;
+          
+          console.log('Final active staff count:', activeStaff.length);
+          console.log('Active staff users:', activeStaff);
+          
+          // Calculate staff growth (new staff this month)
+          const newStaffThisMonth = allUsers.filter(user => {
+            const userDate = new Date(user.createdAt || user.joinedAt);
+            return userDate.getMonth() === currentMonth && 
+                   userDate.getFullYear() === currentYear && 
+                   user.role === 'staff';
+          }).length;
+          
+          setDashboardStats({
+            totalUsers: allUsers.length,
+            activeUsers: activeUsers.length,
+            newUsersThisMonth: newUsersThisMonth,
+            userGrowthPercentage: newUsersThisMonth > 0 ? Math.round((newUsersThisMonth / allUsers.length) * 100) : 0,
+            activeStaff: activeStaff.length,
+            activeStaffGrowth: newStaffThisMonth
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      // Fallback to mock data if API fails
+      setDashboardStats({
+        totalUsers: 0,
+        activeUsers: 0,
+        newUsersThisMonth: 0,
+        userGrowthPercentage: 0,
+        activeStaff: 0,
+        activeStaffGrowth: 0
+      });
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // Load users when component mounts or when user management tab is selected
+  useEffect(() => {
+    if (tabValue === 0) { // User Management tab
+      fetchUsers();
+    }
+  }, [tabValue]);
+
+  // Load dashboard stats when component mounts
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+
+
+  // Handle user status update
+  const handleUserStatusUpdate = async (userId, newStatus) => {
+    try {
+      setLoading(true);
+      const response = await updateUser(userId, { isActive: newStatus === 'active' });
+      
+      if (response && response.success) {
+        // Update user in local state
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user._id === userId || user.id === userId
+              ? { ...user, isActive: newStatus === 'active' }
+              : user
+          )
+        );
+        
+        // Refresh dashboard stats after user status change
+        fetchDashboardStats();
+      } else {
+        throw new Error(response?.message || 'Failed to update user status');
+      }
+    } catch (err) {
+      console.error('Error updating user status:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to update user status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle user deletion
+  const handleUserDelete = async (userId) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      try {
+        setLoading(true);
+        const response = await deleteUser(userId);
+        
+        if (response && response.success) {
+          // Remove user from local state
+          setUsers(prevUsers => 
+            prevUsers.filter(user => (user._id || user.id) !== userId)
+          );
+          
+          // Refresh dashboard stats after user deletion
+          fetchDashboardStats();
+        } else {
+          throw new Error(response?.message || 'Failed to delete user');
+        }
+      } catch (err) {
+        console.error('Error deleting user:', err);
+        setError(err.message || 'Failed to delete user');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
   
-  // Mock data - replace with actual API calls
+  // Dynamic stats based on real data
   const stats = [
-    { title: 'Total Users', value: '2,845', change: '+12%', color: '#3b82f6', icon: <PeopleAlt /> },
-    { title: 'Waste Collected', value: '156.8 tons', change: '+8%', color: '#10b981', icon: <Recycling /> },
-    { title: 'Active Collectors', value: '48', change: '+3', color: '#f59e0b', icon: <LocalShipping /> },
-    { title: 'System Efficiency', value: '94%', change: '+2%', color: '#6366f1', icon: <BarChart /> }
+    { 
+      title: 'Total Users', 
+      value: statsLoading ? 'Loading...' : dashboardStats.totalUsers.toLocaleString(), 
+      change: dashboardStats.userGrowthPercentage > 0 ? `+${dashboardStats.userGrowthPercentage}%` : '0%', 
+      color: '#3b82f6', 
+      icon: <MdPeopleAlt /> 
+    },
+    { title: 'Waste Collected', value: '156.8 tons', change: '+8%', color: '#10b981', icon: <MdRecycling /> },
+    { 
+      title: 'Active Staff', 
+      value: statsLoading ? 'Loading...' : dashboardStats.activeStaff.toString(), 
+      change: dashboardStats.activeStaffGrowth > 0 ? `+${dashboardStats.activeStaffGrowth}` : '0', 
+      color: '#f59e0b', 
+      icon: <MdLocalShipping /> 
+    },
+    { title: 'System Efficiency', value: '94%', change: '+2%', color: '#6366f1', icon: <MdBarChart /> }
   ];
 
   const systemAlerts = [
@@ -78,20 +268,27 @@ const AdminDashboard = () => {
     { id: 4, type: 'success', message: 'All services operational', time: '3 days ago' }
   ];
 
-  const recentUsers = [
-    { id: 1, name: 'John Smith', role: 'Resident', status: 'active', location: 'North Zone', joined: '2 days ago' },
-    { id: 2, name: 'Sarah Johnson', role: 'Collector', status: 'active', location: 'East Zone', joined: '1 week ago' },
-    { id: 3, name: 'Michael Brown', role: 'Resident', status: 'pending', location: 'West Zone', joined: '2 weeks ago' },
-    { id: 4, name: 'Emily Davis', role: 'Supervisor', status: 'active', location: 'South Zone', joined: '1 month ago' }
-  ];
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+    return `${Math.ceil(diffDays / 30)} months ago`;
+  };
 
   const getAlertIcon = (type) => {
     switch (type) {
-      case 'success': return <CheckCircle sx={{ color: '#10b981' }} />;
-      case 'info': return <Info sx={{ color: '#3b82f6' }} />;
-      case 'warning': return <Warning sx={{ color: '#f59e0b' }} />;
-      case 'error': return <Error sx={{ color: '#ef4444' }} />;
-      default: return <Info sx={{ color: '#3b82f6' }} />;
+      case 'success': return <MdCheckCircle className="text-green-500 text-xl" />;
+      case 'info': return <MdInfo className="text-blue-500 text-xl" />;
+      case 'warning': return <MdWarning className="text-yellow-500 text-xl" />;
+      case 'error': return <MdError className="text-red-500 text-xl" />;
+      default: return <MdInfo className="text-blue-500 text-xl" />;
     }
   };
 
@@ -105,741 +302,442 @@ const AdminDashboard = () => {
   };
 
   return (
-    <Box sx={{ 
-      flex: 1,
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '20px',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-      minHeight: '100vh',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Subtle Background Pattern */}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)',
-          backgroundSize: '30px 30px',
-          opacity: 0.3,
-          pointerEvents: 'none',
-          zIndex: 0
-        }}
-      />
-
-      <Container maxWidth="xl" sx={{ 
-        width: '100%',
-        position: 'relative',
-        zIndex: 1
-      }}>
-        {/* Admin Dashboard Header */}
-        <Box sx={{ 
-          mb: 4, 
-          width: '100%', 
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2
-        }}>
-          <Box>
-            <Typography variant="h4" component="h1" sx={{ 
-              fontWeight: 700, 
-              mb: 1, 
-              color: '#0f172a',
-              letterSpacing: '-0.5px'
-            }}>
+    <div className="flex-1 p-6 min-h-screen bg-white relative overflow-hidden">
+      <div className="relative z-10 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="bg-white border-4 border-blue-500 rounded-3xl p-8 shadow-xl" style={{borderImage: 'linear-gradient(45deg, #3b82f6, #8b5cf6) 1'}}>
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-4xl font-bold text-black flex items-center">
+                <MdDashboard className="text-blue-600 mr-3" size={40} />
               Admin Dashboard
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Comprehensive system overview and management controls
-            </Typography>
-          </Box>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button 
-              variant="contained" 
-              sx={{ 
-                backgroundColor: '#0f172a',
-                '&:hover': { backgroundColor: '#1e293b' }
-              }}
-              startIcon={<Download />}
-            >
-              Export Report
-            </Button>
-            <IconButton 
-              sx={{ 
-                backgroundColor: 'white',
-                border: '1px solid #e2e8f0',
-                '&:hover': { backgroundColor: '#f8fafc' }
-              }}
-            >
-              <Badge badgeContent={4} color="error">
-                <Notifications color="action" />
-              </Badge>
-            </IconButton>
-          </Box>
-        </Box>
+            </h1>
+          <div className="flex gap-3">
+                <button 
+                  onClick={fetchDashboardStats}
+                  disabled={statsLoading}
+                  className="flex items-center px-4 py-2 bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 text-blue-600 rounded-xl hover:bg-blue-500/30 hover:border-blue-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+                  title="Refresh Dashboard Stats"
+                >
+                  <MdRefresh className={`w-4 h-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+                  {statsLoading ? 'Refreshing...' : 'Refresh Stats'}
+            </button>
+                <button className="flex items-center px-4 py-2 bg-gray-500/20 backdrop-blur-sm border border-gray-500/30 text-gray-600 rounded-xl hover:bg-gray-500/30 hover:border-gray-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-gray-500/25">
+                  <MdDownload className="w-4 h-4 mr-2" />
+                  Export Report
+            </button>
+                <button className="relative px-4 py-2 bg-red-500/20 backdrop-blur-sm border border-red-500/30 text-red-600 rounded-xl hover:bg-red-500/30 hover:border-red-500/50 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25">
+                  <MdNotifications className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                4
+              </span>
+            </button>
+              </div>
+            </div>
+            <p className="text-lg text-gray-600 font-light tracking-wide">
+              Comprehensive system overview and management controls for waste management operations
+            </p>
+          </div>
+        </div>
 
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {stats.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <Card sx={{ 
-                height: '160px',
-                background: 'white',
-                borderRadius: 2,
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                transition: 'all 0.2s ease',
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-                '&:hover': {
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  transform: 'translateY(-2px)'
-                }
-              }}>
-                <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 500, fontSize: '14px' }}>
-                      {stat.title}
-                    </Typography>
-                    <Chip 
-                      label={stat.change} 
-                      size="small"
-                      sx={{ 
-                        fontWeight: 'bold',
-                        fontSize: '11px',
-                        height: '20px',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        color: '#10b981',
-                        border: '1px solid rgba(16, 185, 129, 0.2)'
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                    <Typography variant="h4" component="div" sx={{ 
-                      fontWeight: 700, 
-                      fontSize: '28px',
-                      lineHeight: 1.2,
-                      color: '#0f172a'
-                    }}>
-                      {stat.value}
-                    </Typography>
-                    <Avatar sx={{ 
-                      backgroundColor: `${stat.color}15`, 
-                      color: stat.color,
-                      width: 42, 
-                      height: 42 
-                    }}>
+        <div className="mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {stats.map((stat, index) => {
+              const colors = [
+                { border: 'border-blue-500', gradient: 'from-blue-400 to-cyan-400', bg: 'from-blue-300 to-cyan-300' },
+                { border: 'border-green-500', gradient: 'from-green-400 to-emerald-400', bg: 'from-green-300 to-emerald-300' },
+                { border: 'border-orange-500', gradient: 'from-orange-400 to-yellow-400', bg: 'from-orange-300 to-yellow-300' },
+                { border: 'border-purple-500', gradient: 'from-purple-400 to-violet-400', bg: 'from-purple-300 to-violet-300' }
+              ];
+              const colorScheme = colors[index] || colors[0];
+              
+              return (
+                <div key={index} className={`bg-white border-4 ${colorScheme.border} rounded-3xl p-6 shadow-xl relative overflow-hidden hover:scale-105 transition-all duration-300`}>
+                  <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${colorScheme.bg} rounded-full transform translate-x-8 -translate-y-8`} />
+                  
+                  <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-medium text-gray-800">{stat.title}</h3>
+                      <div className={`bg-gradient-to-r ${colorScheme.gradient} rounded-xl px-3 py-1 shadow-lg`}>
+                        <span className="text-white font-bold text-xs">{stat.change}</span>
+                </div>
+                </div>
+                    
+                    <div className="flex justify-between items-end">
+                      <div className="text-4xl font-bold text-black">{stat.value}</div>
+                      <div className={`w-12 h-12 bg-gradient-to-br ${colorScheme.gradient} rounded-xl flex items-center justify-center shadow-lg`}>
                       {stat.icon}
-                    </Avatar>
-                  </Box>
-                </CardContent>
-                <Box sx={{ height: '4px', width: '100%', backgroundColor: stat.color }} />
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                  </div>
+                </div>
+                    
+                    <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${colorScheme.gradient} rounded-b-3xl`} />
+              </div>
+            </div>
+              );
+            })}
+            </div>
+        </div>
 
         {/* Main Content Area with Tabs */}
-        <Card sx={{ 
-          width: '100%', 
-          mb: 4,
-          borderRadius: 2,
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e2e8f0',
-          overflow: 'hidden'
-        }}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs 
-              value={tabValue} 
-              onChange={handleTabChange}
-              sx={{ 
-                '& .MuiTab-root': { 
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  textTransform: 'none',
-                  minHeight: '48px'
-                },
-                '& .Mui-selected': {
-                  color: '#0f172a'
-                },
-                '& .MuiTabs-indicator': {
-                  backgroundColor: '#0f172a'
-                }
-              }}
-            >
-              <Tab label="System Overview" icon={<DashboardIcon />} iconPosition="start" />
-              <Tab label="User Management" icon={<PeopleAlt />} iconPosition="start" />
-              <Tab label="Waste Collection" icon={<Recycling />} iconPosition="start" />
-              <Tab label="Analytics" icon={<BarChart />} iconPosition="start" />
-            </Tabs>
-          </Box>
+        <div className="bg-white border-4 border-blue-500 rounded-3xl shadow-xl mb-8 overflow-hidden">
+          <div className="border-b-4 border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
+            <div className="flex">
+              {[
+                { label: 'User Management', icon: <MdPeopleAlt className="text-lg" /> },
+                { label: 'Waste Collection', icon: <MdRecycling className="text-lg" /> }
+              ].map((tab, index) => (
+                <button
+                  key={index}
+                  onClick={() => setTabValue(index)}
+                  className={`flex items-center space-x-3 px-8 py-6 text-sm font-bold transition-all duration-300 border-b-4 ${
+                    tabValue === index
+                      ? 'text-green-700 border-green-500 bg-white shadow-lg transform scale-105'
+                      : 'text-gray-600 border-transparent hover:text-green-700 hover:bg-white/50 hover:scale-105'
+                  }`}
+                >
+                  <span className={tabValue === index ? 'text-green-600' : 'text-gray-500'}>
+                  {tab.icon}
+                  </span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           
           {/* Tab Content */}
-          <Box sx={{ p: 3 }}>
-            {/* System Overview Tab */}
-            {tabValue === 0 && (
-              <Grid container spacing={3}>
-                {/* System Alerts */}
-                <Grid item xs={12} md={6}>
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                      System Alerts
-                    </Typography>
-                    <IconButton size="small">
-                      <FilterList fontSize="small" />
-                    </IconButton>
-                  </Box>
-                  <List sx={{ 
-                    bgcolor: 'background.paper',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 1,
-                    overflow: 'hidden'
-                  }}>
-                    {systemAlerts.map((alert, index) => (
-                      <React.Fragment key={alert.id}>
-                        <ListItem 
-                          sx={{ 
-                            py: 1.5,
-                            px: 2,
-                            '&:hover': { backgroundColor: '#f8fafc' }
-                          }}
-                          secondaryAction={
-                            <IconButton edge="end" size="small">
-                              <MoreVert fontSize="small" />
-                            </IconButton>
-                          }
-                        >
-                          <ListItemAvatar>
-                            <Avatar sx={{ 
-                              backgroundColor: 'transparent',
-                              width: 36,
-                              height: 36
-                            }}>
-                              {getAlertIcon(alert.type)}
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                                {alert.message}
-                              </Typography>
-                            }
-                            secondary={
-                              <Typography variant="caption" color="text.secondary">
-                                {alert.time}
-                              </Typography>
-                            }
-                          />
-                        </ListItem>
-                        {index < systemAlerts.length - 1 && <Divider />}
-                      </React.Fragment>
-                    ))}
-                  </List>
-                </Grid>
-                
-                {/* System Health */}
-                <Grid item xs={12} md={6}>
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                      System Health
-                    </Typography>
-                  </Box>
-                  <Card sx={{ 
-                    border: '1px solid #e2e8f0',
-                    boxShadow: 'none',
-                    borderRadius: 1
-                  }}>
-                    <CardContent sx={{ p: 2 }}>
-                      <Box sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#0f172a' }}>
-                            Server Load
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                            42%
-                          </Typography>
-                        </Box>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={42} 
-                          sx={{ 
-                            height: 6, 
-                            borderRadius: 3, 
-                            backgroundColor: '#e2e8f0',
-                            '& .MuiLinearProgress-bar': {
-                              backgroundColor: '#3b82f6'
-                            }
-                          }}
-                        />
-                      </Box>
-                      <Box sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#0f172a' }}>
-                            Database Performance
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                            78%
-                          </Typography>
-                        </Box>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={78} 
-                          sx={{ 
-                            height: 6, 
-                            borderRadius: 3, 
-                            backgroundColor: '#e2e8f0',
-                            '& .MuiLinearProgress-bar': {
-                              backgroundColor: '#10b981'
-                            }
-                          }}
-                        />
-                      </Box>
-                      <Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#0f172a' }}>
-                            Storage Capacity
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                            35%
-                          </Typography>
-                        </Box>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={35} 
-                          sx={{ 
-                            height: 6, 
-                            borderRadius: 3, 
-                            backgroundColor: '#e2e8f0',
-                            '& .MuiLinearProgress-bar': {
-                              backgroundColor: '#6366f1'
-                            }
-                          }}
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
-            )}
+          <div className="p-8">
             
             {/* User Management Tab */}
-            {tabValue === 1 && (
-              <Box>
-                <Box sx={{ 
-                  mb: 3, 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center'
-                }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                    Recent User Activity
-                  </Typography>
-                  <Button 
-                    variant="contained" 
-                    size="small"
-                    startIcon={<Add />}
-                    sx={{ 
-                      backgroundColor: '#0f172a',
-                      '&:hover': { backgroundColor: '#1e293b' }
-                    }}
-                  >
-                    Add User
-                  </Button>
-                </Box>
-                <TableContainer component={Paper} sx={{ 
-                  boxShadow: 'none',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 1,
-                  overflow: 'hidden'
-                }}>
-                  <Table sx={{ minWidth: 650 }} size="medium">
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Name</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Role</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Status</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Location</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Joined</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {recentUsers.map((user) => (
-                        <TableRow 
-                          key={user.id}
-                          sx={{ 
-                            '&:last-child td, &:last-child th': { border: 0 },
-                            '&:hover': { backgroundColor: '#f8fafc' }
-                          }}
-                        >
-                          <TableCell component="th" scope="row">
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                              <Avatar 
-                                sx={{ 
-                                  width: 36, 
-                                  height: 36,
-                                  backgroundColor: '#e2e8f0',
-                                  color: '#64748b',
-                                  fontSize: '14px',
-                                  fontWeight: 600
-                                }}
-                              >
-                                {user.name.split(' ').map(n => n[0]).join('')}
-                              </Avatar>
-                              <Typography variant="body2" sx={{ fontWeight: 500, color: '#0f172a' }}>
-                                {user.name}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={user.role} 
-                              size="small"
-                              sx={{ 
-                                fontWeight: 500,
-                                fontSize: '12px',
-                                backgroundColor: user.role === 'Supervisor' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(203, 213, 225, 0.3)',
-                                color: user.role === 'Supervisor' ? '#6366f1' : '#64748b',
-                                border: user.role === 'Supervisor' ? '1px solid rgba(99, 102, 241, 0.2)' : 'none'
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={user.status} 
-                              color={getStatusColor(user.status)}
-                              size="small"
-                              sx={{ 
-                                fontWeight: 500,
-                                fontSize: '12px',
-                                height: '22px'
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="text.secondary">
-                              {user.location}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="text.secondary">
-                              {user.joined}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <IconButton size="small">
-                              <MoreVert fontSize="small" />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
+            {tabValue === 0 && (
+                      <div>
+                {/* Professional Header */}
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 border-4 border-blue-500 rounded-3xl p-6 mb-8 shadow-xl">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center shadow-lg">
+                        <MdPeopleAlt className="text-2xl text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-3xl font-bold text-gray-800">User Management</h3>
+                        <p className="text-gray-600 font-medium">Manage system users, roles, and permissions</p>
+                        </div>
+                        </div>
+                    <div className="flex gap-4">
+                    <button 
+                      onClick={fetchUsers}
+                        className="flex items-center space-x-3 bg-white/80 backdrop-blur-sm border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-xl hover:bg-white hover:border-gray-400 transition-all duration-300 hover:scale-105 shadow-lg font-semibold"
+                    >
+                        <MdRefresh className="text-xl" />
+                      <span>Refresh</span>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/admin/users')}
+                        className="flex items-center space-x-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 shadow-lg font-semibold"
+                    >
+                        <MdAdd className="text-xl" />
+                      <span>Manage Users</span>
+                    </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className="mb-6 bg-red-50 border-4 border-red-200 rounded-2xl p-6 shadow-lg">
+                    <div className="flex items-center">
+                      <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mr-4">
+                        <MdError className="text-red-500 text-2xl" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-red-800">Error Loading Users</h4>
+                        <p className="text-red-700 font-medium">{error}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading State */}
+                {loading && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="bg-white border-4 border-blue-500 rounded-3xl p-8 shadow-xl">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-lg font-semibold text-gray-700">Loading users...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Users Table */}
+                {!loading && (
+                  <div className="bg-white border-4 border-gray-300 rounded-3xl overflow-hidden shadow-xl">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
+                          <tr>
+                            <th className="px-8 py-6 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">NAME</th>
+                            <th className="px-8 py-6 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">EMAIL</th>
+                            <th className="px-8 py-6 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">ROLE</th>
+                            <th className="px-8 py-6 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">STATUS</th>
+                            <th className="px-8 py-6 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">JOINED</th>
+                            <th className="px-8 py-6 text-left text-sm font-bold text-gray-800 uppercase tracking-wider">ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y-2 divide-gray-100">
+                          {users.length === 0 ? (
+                            <tr>
+                              <td colSpan="6" className="px-8 py-12 text-center">
+                                <div className="bg-gray-50 border-4 border-gray-200 rounded-3xl p-8">
+                                  <div className="w-16 h-16 bg-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <MdPeopleAlt className="text-3xl text-gray-400" />
+                                  </div>
+                                  <h3 className="text-lg font-bold text-gray-600 mb-2">No Users Found</h3>
+                                  <p className="text-gray-500">No users are currently registered in the system.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            users.map((user, index) => (
+                              <tr key={user._id || user.id} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50 transition-all duration-300 ${index % 2 === 0 ? 'bg-gray-50/30' : 'bg-white'}`}>
+                                <td className="px-8 py-6 whitespace-nowrap">
+                                  <div className="flex items-center space-x-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-lg">
+                                      {user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                                    </div>
+                                    <div>
+                                      <div className="text-lg font-bold text-gray-800">
+                                        {user.name || 'Unknown User'}
+                                      </div>
+                                      <div className="text-sm text-gray-500 font-medium">
+                                        ID: {user._id || user.id}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-8 py-6 whitespace-nowrap">
+                                  <div className="text-sm font-semibold text-gray-700">
+                                  {user.email || 'No email'}
+                                  </div>
+                                </td>
+                                <td className="px-8 py-6 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-4 py-2 rounded-2xl text-sm font-bold shadow-lg ${
+                                    user.role === 'admin' || user.role === 'supervisor'
+                                      ? 'bg-purple-100 text-purple-800 border-2 border-purple-200' 
+                                      : user.role === 'collector' || user.role === 'staff'
+                                      ? 'bg-blue-100 text-blue-800 border-2 border-blue-200'
+                                      : 'bg-gray-100 text-gray-800 border-2 border-gray-200'
+                                  }`}>
+                                    {user.role || 'resident'}
+                                  </span>
+                                </td>
+                                <td className="px-8 py-6 whitespace-nowrap">
+                                  <span
+                                    onClick={() => handleUserStatusUpdate(user._id || user.id, user.isActive ? 'inactive' : 'active')}
+                                    className={`inline-flex items-center px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer transition-all duration-300 hover:scale-105 shadow-lg ${
+                                      user.isActive 
+                                        ? 'bg-green-100 text-green-800 border-2 border-green-200 hover:bg-green-200' 
+                                        : 'bg-red-100 text-red-800 border-2 border-red-200 hover:bg-red-200'
+                                    }`}
+                                  >
+                                    {user.isActive ? 'active' : 'inactive'}
+                                  </span>
+                                </td>
+                                <td className="px-8 py-6 whitespace-nowrap">
+                                  <div className="text-sm font-semibold text-gray-700">
+                                  {formatDate(user.createdAt || user.joinedAt)}
+                                  </div>
+                                </td>
+                                <td className="px-8 py-6 whitespace-nowrap">
+                                  <div className="flex items-center space-x-3">
+                                    <button 
+                                      onClick={() => setSelectedUser(user)}
+                                      className="w-10 h-10 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
+                                      title="View Details"
+                                    >
+                                      <FaEye className="text-lg" />
+                                    </button>
+                                    <button 
+                                      onClick={() => setSelectedUser(user)}
+                                      className="w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
+                                      title="Edit User"
+                                    >
+                                      <FaEdit className="text-lg" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleUserDelete(user._id || user.id)}
+                                      className="w-10 h-10 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
+                                      title="Delete User"
+                                    >
+                                      <FaTrash className="text-lg" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             
             {/* Waste Collection Tab */}
-            {tabValue === 2 && (
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={7}>
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>
+            {tabValue === 1 && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">
                       Collection Routes
-                    </Typography>
-                    <Button 
-                      variant="outlined" 
-                      size="small"
-                      startIcon={<Add />}
-                      sx={{ 
-                        borderColor: '#0f172a',
-                        color: '#0f172a',
-                        '&:hover': { borderColor: '#1e293b', backgroundColor: 'rgba(15, 23, 42, 0.04)' }
-                      }}
-                    >
-                      Add Route
-                    </Button>
-                  </Box>
-                  <TableContainer component={Paper} sx={{ 
-                    boxShadow: 'none',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 1,
-                    overflow: 'hidden'
-                  }}>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Route ID</TableCell>
-                          <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Area</TableCell>
-                          <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Collector</TableCell>
-                          <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Status</TableCell>
-                          <TableCell sx={{ fontWeight: 600, color: '#64748b', fontSize: '13px' }}>Progress</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
+                    </h3>
+                    <button className="flex items-center space-x-2 border border-slate-900 text-slate-900 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors font-medium">
+                      <MdAdd className="text-lg" />
+                      <span>Add Route</span>
+                    </button>
+                  </div>
+                  <div className="bg-white border-4 border-green-500 rounded-xl overflow-hidden shadow-lg">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Route ID</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Area</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Collector</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Progress</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
                         {[
                           { id: 'RT-1001', area: 'North Zone', collector: 'John Doe', status: 'active', progress: 75 },
                           { id: 'RT-1002', area: 'East Zone', collector: 'Jane Smith', status: 'active', progress: 45 },
                           { id: 'RT-1003', area: 'South Zone', collector: 'Robert Johnson', status: 'pending', progress: 0 },
                           { id: 'RT-1004', area: 'West Zone', collector: 'Emily Brown', status: 'completed', progress: 100 }
                         ].map((route) => (
-                          <TableRow 
-                            key={route.id}
-                            sx={{ 
-                              '&:last-child td, &:last-child th': { border: 0 },
-                              '&:hover': { backgroundColor: '#f8fafc' }
-                            }}
-                          >
-                            <TableCell>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                                {route.id}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">
+                            <tr key={route.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className="text-sm font-semibold text-slate-900">{route.id}</span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                 {route.area}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                 {route.collector}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Chip 
-                                label={route.status} 
-                                color={getStatusColor(route.status)}
-                                size="small"
-                                sx={{ 
-                                  fontWeight: 500,
-                                  fontSize: '12px',
-                                  height: '22px'
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={route.progress} 
-                                  sx={{ 
-                                    flexGrow: 1,
-                                    height: 6, 
-                                    borderRadius: 3, 
-                                    backgroundColor: '#e2e8f0',
-                                    '& .MuiLinearProgress-bar': {
-                                      backgroundColor: route.progress === 100 ? '#10b981' : '#3b82f6'
-                                    }
-                                  }}
-                                />
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b' }}>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  route.status === 'active' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : route.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {route.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="flex items-center space-x-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className={`h-2 rounded-full transition-all duration-300 ${
+                                        route.progress === 100 ? 'bg-green-500' : 'bg-blue-500'
+                                      }`}
+                                      style={{ width: `${route.progress}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-xs font-semibold text-gray-600 min-w-[30px]">
                                   {route.progress}%
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Grid>
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
                 
-                <Grid item xs={12} md={5}>
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                <div className="lg:col-span-1">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">
                       Waste Categories
-                    </Typography>
-                  </Box>
-                  <Card sx={{ 
-                    border: '1px solid #e2e8f0',
-                    boxShadow: 'none',
-                    borderRadius: 1
-                  }}>
-                    <CardContent sx={{ p: 2 }}>
+                    </h3>
+                  </div>
+                  <div className="bg-white border-4 border-green-500 rounded-xl p-4 shadow-lg">
                       {[
                         { name: 'Organic Waste', amount: '68.2 tons', percentage: 43, color: '#10b981' },
                         { name: 'Recyclable Materials', amount: '45.7 tons', percentage: 29, color: '#3b82f6' },
                         { name: 'Hazardous Waste', amount: '12.4 tons', percentage: 8, color: '#ef4444' },
                         { name: 'Other Waste', amount: '30.5 tons', percentage: 20, color: '#f59e0b' }
                       ].map((category, index) => (
-                        <Box key={index} sx={{ mb: index < 3 ? 3 : 0 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 500, color: '#0f172a' }}>
-                              {category.name}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                                {category.amount}
-                              </Typography>
-                              <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b' }}>
-                                ({category.percentage}%)
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={category.percentage} 
-                            sx={{ 
-                              height: 8, 
-                              borderRadius: 3, 
-                              backgroundColor: '#e2e8f0',
-                              '& .MuiLinearProgress-bar': {
+                      <div key={index} className={index < 3 ? 'mb-6' : ''}>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-slate-900">{category.name}</span>
+                          <div className="flex items-center space-x-1">
+                            <span className="text-sm font-semibold text-slate-900">{category.amount}</span>
+                            <span className="text-xs font-semibold text-gray-600">({category.percentage}%)</span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="h-2 rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${category.percentage}%`,
                                 backgroundColor: category.color
-                              }
                             }}
-                          />
-                        </Box>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </Grid>
-              </Grid>
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
-            
-            {/* Analytics Tab */}
-            {tabValue === 3 && (
-              <Box>
-                <Box sx={{ 
-                  mb: 3, 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center'
-                }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                    Performance Metrics
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button 
-                      variant="outlined" 
-                      size="small"
-                      startIcon={<Download />}
-                      sx={{ 
-                        borderColor: '#0f172a',
-                        color: '#0f172a',
-                        '&:hover': { borderColor: '#1e293b', backgroundColor: 'rgba(15, 23, 42, 0.04)' }
-                      }}
-                    >
-                      Export Data
-                    </Button>
-                    <Button 
-                      variant="contained" 
-                      size="small"
-                      sx={{ 
-                        backgroundColor: '#0f172a',
-                        '&:hover': { backgroundColor: '#1e293b' }
-                      }}
-                    >
-                      Generate Report
-                    </Button>
-                  </Box>
-                </Box>
-                
-                <Grid container spacing={3}>
-                  {[
-                    { title: 'Collection Efficiency', value: '92%', change: '+5%', description: 'Average waste collected per route' },
-                    { title: 'User Satisfaction', value: '4.7/5', change: '+0.3', description: 'Based on user feedback surveys' },
-                    { title: 'System Uptime', value: '99.8%', change: '+0.1%', description: 'Platform availability this month' },
-                    { title: 'Response Time', value: '1.2s', change: '-0.3s', description: 'Average API response time' }
-                  ].map((metric, index) => (
-                    <Grid item xs={12} sm={6} key={index}>
-                      <Card sx={{ 
-                        border: '1px solid #e2e8f0',
-                        boxShadow: 'none',
-                        borderRadius: 1,
-                        height: '100%'
-                      }}>
-                        <CardContent sx={{ p: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                              {metric.title}
-                            </Typography>
-                            <Chip 
-                              label={metric.change} 
-                              size="small"
-                              sx={{ 
-                                fontWeight: 'bold',
-                                fontSize: '11px',
-                                height: '20px',
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                color: '#10b981',
-                                border: '1px solid rgba(16, 185, 129, 0.2)'
-                              }}
-                            />
-                          </Box>
-                          <Typography variant="h4" sx={{ fontWeight: 700, color: '#0f172a', mb: 2 }}>
-                            {metric.value}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {metric.description}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-          </Box>
-        </Card>
+          </div>
+        </div>
 
         {/* Quick Actions */}
-        <Box sx={{ width: '100%', mb: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a', mb: 3 }}>
+        <div className="w-full mb-8">
+          <div className="bg-white border-4 border-purple-500 rounded-3xl p-8 shadow-xl">
+            <h3 className="text-2xl font-bold text-gray-800 mb-8 flex items-center">
+              <MdSettings className="text-purple-600 mr-3" size={28} />
             Quick Actions
-          </Typography>
-          <Grid container spacing={2}>
-            {[
-              { title: 'User Management', icon: <SupervisorAccount />, color: '#6366f1' },
-              { title: 'Collection Routes', icon: <LocalShipping />, color: '#10b981' },
-              { title: 'Inventory', icon: <Inventory />, color: '#f59e0b' },
-              { title: 'System Settings', icon: <Settings />, color: '#ef4444' }
-            ].map((action, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
-                <Card sx={{ 
-                  p: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  height: '100%',
-                  minHeight: 120,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                    transform: 'translateY(-2px)',
-                    borderColor: '#cbd5e1'
-                  }
-                }}>
-                  <Avatar sx={{ 
-                    backgroundColor: `${action.color}15`, 
-                    color: action.color,
-                    width: 48,
-                    height: 48,
-                    mb: 1.5
-                  }}>
-                    {action.icon}
-                  </Avatar>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0f172a' }}>
-                    {action.title}
-                  </Typography>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      </Container>
-    </Box>
+          </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { title: 'User Management', icon: <MdSupervisorAccount />, color: 'blue' },
+                { title: 'Collection Routes', icon: <MdLocalShipping />, color: 'green' },
+                { title: 'Inventory', icon: <MdInventory />, color: 'orange' },
+                { title: 'System Settings', icon: <MdSettings />, color: 'red' }
+              ].map((action, index) => {
+                const colorClasses = {
+                  blue: 'border-blue-500 bg-gradient-to-br from-blue-400 to-cyan-400',
+                  green: 'border-green-500 bg-gradient-to-br from-green-400 to-emerald-400',
+                  orange: 'border-orange-500 bg-gradient-to-br from-orange-400 to-yellow-400',
+                  red: 'border-red-500 bg-gradient-to-br from-red-400 to-pink-400'
+                };
+                const colorClass = colorClasses[action.color] || colorClasses.blue;
+                
+                return (
+                  <div key={index} className={`bg-white border-4 ${action.color === 'blue' ? 'border-blue-500' : action.color === 'green' ? 'border-green-500' : action.color === 'orange' ? 'border-orange-500' : 'border-red-500'} rounded-3xl p-6 flex flex-col items-center justify-center text-center min-h-[140px] cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-105 relative overflow-hidden`}>
+                    <div className={`absolute top-0 right-0 w-16 h-16 ${colorClass.split(' ')[1]} rounded-full transform translate-x-6 -translate-y-6`} />
+                    <div className="relative z-10">
+                      <div className={`w-16 h-16 ${colorClass} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
+                        <span className="text-2xl text-white">{action.icon}</span>
+                </div>
+                      <span className="text-sm font-bold text-gray-800">{action.title}</span>
+              </div>
+                </div>
+                );
+              })}
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

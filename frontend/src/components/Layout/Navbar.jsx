@@ -129,7 +129,6 @@ const Navbar = () => {
         {navItems.map((item) => (
           <ListItem 
             key={item.label}
-            component="button"
             onClick={() => handleNavigation(item.path)}
             sx={{
               cursor: 'pointer',
@@ -216,7 +215,6 @@ const Navbar = () => {
             
             {/* Dashboard Link */}
             <ListItem 
-              component="button"
               onClick={() => handleNavigation(getDashboardPath())}
               sx={{
                 cursor: 'pointer',
@@ -241,7 +239,6 @@ const Navbar = () => {
             
             {/* Logout Button */}
             <ListItem 
-              component="button"
               onClick={handleLogout}
               sx={{
                 cursor: 'pointer',
@@ -268,7 +265,6 @@ const Navbar = () => {
         ) : (
           <>
             <ListItem 
-              component="button"
               onClick={() => handleNavigation('/login')}
               sx={{
                 cursor: 'pointer',
@@ -291,7 +287,6 @@ const Navbar = () => {
               />
             </ListItem>
             <ListItem 
-              component="button"
               onClick={() => handleNavigation('/register')}
               sx={{
                 cursor: 'pointer',

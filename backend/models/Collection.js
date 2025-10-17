@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const collectionSchema = new mongoose.Schema({
   bin: { type: mongoose.Schema.Types.ObjectId, ref: 'Bin', required: true },
@@ -19,4 +19,4 @@ const collectionSchema = new mongoose.Schema({
   qrScanned: { type: Boolean, default: false }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Collection', collectionSchema);
+export default mongoose.model('Collection', collectionSchema);

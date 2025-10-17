@@ -21,29 +21,93 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('token');
         if (token) {
           // Check if token is expired
-          const tokenData = JSON.parse(atob(token.split('.')[1]));
-          const currentTime = Date.now() / 1000;
-          
-          if (tokenData.exp && tokenData.exp < currentTime) {
-            // Token is expired, remove it and clear user
+          try {
+            const tokenData = JSON.parse(atob(token.split('.')[1]));
+            const currentTime = Date.now() / 1000;
+            
+            if (tokenData.exp && tokenData.exp < currentTime) {
+              // Token is expired, remove it and clear user
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              setUser(null);
+              console.log('Token expired, user logged out');
+              setLoading(false);
+              return;
+            }
+          } catch (tokenError) {
+            console.log('Invalid token format, clearing auth data');
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
             setUser(null);
-            console.log('Token expired, user logged out');
-          } else {
-            // Token is valid, get user data
-            const response = await getCurrentUser();
-            console.log('getCurrentUser response:', response); // Debug log
+            setLoading(false);
+            return;
+          }
+
+          // Try to get user from localStorage first (immediate display)
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              console.log('Using stored user data for immediate display:', parsedUser);
+              setUser(parsedUser);
+              setLoading(false); // Allow user to see the app immediately
+            } catch (e) {
+              console.log('Failed to parse stored user data');
+            }
+          }
+
+          // Try to get fresh user data from API (in background)
+          try {
+            console.log('Attempting to get current user with token...');
+            const response = await Promise.race([
+              getCurrentUser(),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timeout')), 5000)
+              )
+            ]);
+            console.log('getCurrentUser response:', response);
             
             // Handle API response structure: { success: true, data: { user: {...} } }
             const userData = response.data?.user || response.user || response;
-            console.log('Extracted user from getCurrentUser:', userData); // Debug log
-            setUser(userData);
+            console.log('Extracted user from getCurrentUser:', userData);
+            
+            if (userData && userData._id) {
+              setUser(userData);
+              localStorage.setItem('user', JSON.stringify(userData));
+              console.log('Updated user data from API');
+            }
+          } catch (apiError) {
+            console.log('API call failed, but keeping stored user data:', apiError.message);
+            // Don't clear user data if API fails - keep the stored data
+            // This prevents logout on network issues
           }
+        } else {
+          // No token found
+          setUser(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        localStorage.removeItem('token');
-        setUser(null);
+        
+        // Only clear token if it's an authentication error
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        } else {
+          // For other errors, keep stored data if available
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              setUser(parsedUser);
+              console.log('Using stored user data after error');
+            } catch (e) {
+              setUser(null);
+            }
+          } else {
+            setUser(null);
+          }
+        }
       } finally {
         setLoading(false);
       }
@@ -80,14 +144,19 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       console.log('Token saved to localStorage'); // Debug log
     }
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+      console.log('User data saved to localStorage'); // Debug log
+    }
   };
 
   const logout = () => {
     // Clear user state
     setUser(null);
     
-    // Remove token from localStorage
+    // Remove token and user data from localStorage
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     
     // Optional: Call logout endpoint to invalidate token on server
     // This ensures the JWT is properly expired on the backend

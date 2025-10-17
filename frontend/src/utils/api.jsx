@@ -29,8 +29,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      console.log('401 Unauthorized - clearing auth data');
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('user');
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -177,23 +182,71 @@ export const getCollectionsByDate = async (date) => {
 };
 
 // Analytics API
-export const getAnalytics = async (params = {}) => {
-  const response = await api.get('/analytics', { params });
+export const getOperationalAnalytics = async (params = {}) => {
+  const response = await api.get('/analytics/test/operational', { params });
   return response.data;
 };
 
-export const getCollectionStats = async (params = {}) => {
-  const response = await api.get('/analytics/collections', { params });
+export const getFinancialAnalytics = async (params = {}) => {
+  const response = await api.get('/analytics/test/financial', { params });
   return response.data;
 };
 
-export const getRouteStats = async (params = {}) => {
+export const getSustainabilityAnalytics = async (params = {}) => {
+  const response = await api.get('/analytics/test/sustainability', { params });
+  return response.data;
+};
+
+// District Analysis API
+export const getDistrictAnalysis = async (params = {}) => {
+  const response = await api.get('/analytics/districts', { params });
+  return response.data;
+};
+
+export const getDistrictAnalysisByUser = async (userId, params = {}) => {
+  const response = await api.get(`/analytics/districts/user/${userId}`, { params });
+  return response.data;
+};
+
+// Bins Analysis API
+export const getBinsAnalysis = async (params = {}) => {
+  const response = await api.get('/analytics/bins', { params });
+  return response.data;
+};
+
+export const getRouteOptimization = async (params = {}) => {
   const response = await api.get('/analytics/routes', { params });
   return response.data;
 };
 
-export const getBinStats = async (params = {}) => {
-  const response = await api.get('/analytics/bins', { params });
+export const optimizeRoutes = async (routeData) => {
+  const response = await api.post('/analytics/routes/optimize', routeData);
+  return response.data;
+};
+
+export const applyOptimizedRoutes = async (optimizedRoutes) => {
+  const response = await api.post('/analytics/routes/apply', { optimizedRoutes });
+  return response.data;
+};
+
+export const runSimulation = async (simulationData) => {
+  const response = await api.post('/analytics/simulation', simulationData);
+  return response.data;
+};
+
+export const exportAnalyticsReport = async (params = {}) => {
+  const response = await api.get('/analytics/export', { params });
+  return response.data;
+};
+
+// User Management API
+export const getAllUsers = async () => {
+  const response = await api.get('/users');
+  return response.data;
+};
+
+export const getUserStats = async () => {
+  const response = await api.get('/user-stats');
   return response.data;
 };
 
@@ -219,6 +272,68 @@ export const generateQRCode = async (data) => {
 
 export const validateQRCode = async (qrData) => {
   const response = await api.post('/qr/validate', { qrData });
+  return response.data;
+};
+
+// Bin Request API
+export const getBinRequests = async (params = {}) => {
+  const response = await api.get('/bin-requests', { params });
+  return response.data;
+};
+
+export const getBinRequestById = async (id) => {
+  const response = await api.get(`/bin-requests/${id}`);
+  return response.data;
+};
+
+export const createBinRequest = async (requestData) => {
+  const response = await api.post('/bin-requests', requestData);
+  return response.data;
+};
+
+export const updateBinRequest = async (id, requestData) => {
+  const response = await api.put(`/bin-requests/${id}`, requestData);
+  return response.data;
+};
+
+export const deleteBinRequest = async (id) => {
+  const response = await api.delete(`/bin-requests/${id}`);
+  return response.data;
+};
+
+export const updateBinRequestStatus = async (id, status, adminNotes = '') => {
+  const response = await api.patch(`/bin-requests/${id}/status`, { status, adminNotes });
+  return response.data;
+};
+
+// export const getBinRequestsByUser = async (userId) => {
+//   const response = await api.get(`/bin-requests/user/${userId}`);
+//   return response.data;
+// };
+
+// Bin Requests API
+export const getBinRequestsByUser = async (userId) => {
+  try {
+    const response = await api.get(`/bin-requests/user/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching bin requests:', error);
+    throw error;
+  }
+};
+
+export const getBinRequestsByStatus = async (status) => {
+  const response = await api.get(`/bin-requests/status/${status}`);
+  return response.data;
+};
+
+export const getBinsByUser = async (userId) => {
+  const response = await api.get(`/bins/user/${userId}`);
+  return response.data;
+};
+
+export const updateBinFillLevel = async (binId, fillLevel) => {
+  const response = await api.patch(`/bins/${binId}/fill-level`, { fillLevel });
   return response.data;
 };
 
