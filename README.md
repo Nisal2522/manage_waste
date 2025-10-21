@@ -3,6 +3,10 @@
 **Smart & Sustainable Waste Management for Urban Areas**
 
 ---
+<p align="center">
+  <img src="./assets/images/bin.jpeg" alt="EcoSmart Waste Management System" width="800"/>
+</p>
+---
 
 ## 📘 Overview
 
