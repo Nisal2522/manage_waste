@@ -4,7 +4,7 @@
 
 ---
 <p align="center">
-  <img src="./assets/images/bin.jpeg" alt="EcoSmart Waste Management System" width="800"/>
+  <img src="./frontend/src/assets/bin.jpeg" alt="EcoSmart Waste Management System" width="800"/>
 </p>
 ---
 
